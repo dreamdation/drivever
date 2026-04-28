@@ -1,0 +1,262 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design System Tokens ─────────────────────────────────── */
+:root {
+  --color-accent:        #0070F3;
+  --color-accent-hover:  #005DD1;
+  --color-accent-light:  #EBF3FF;
+  --color-accent-border: #B3D4FC;
+  --color-success:       #10B981;
+  --color-success-light: #ECFDF5;
+  --color-warning:       #F59E0B;
+  --color-border:        #EAEAEA;
+  --color-border-strong: #D1D5DB;
+  --color-surface:       #FAFAFA;
+  --color-surface-hover: #F3F4F6;
+  --color-fg:            #111111;
+  --color-fg-2:          #555555;
+  --color-fg-3:          #888888;
+
+  --font-sans: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  --header-h: 56px;
+  --content-w: 1080px;
+}
+
+/* ── Base Styles ──────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;     /* 17px */
+    line-height: 1.7;
+    letter-spacing: -0.01em;
+    color: var(--color-fg);
+    background: #fff;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  a:hover { color: var(--color-accent-hover); }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  button, input, select, textarea {
+    font-family: var(--font-sans);
+  }
+}
+
+/* ── Utilities ────────────────────────────────────────────── */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  /* Hero progress bar */
+  .animate-hero-progress {
+    animation: hero-progress 5.5s linear forwards;
+  }
+
+  /* Scrollbar */
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 2px; }
+}
+
+/* ── Keyframes ────────────────────────────────────────────── */
+@keyframes hero-progress {
+  from { width: 0% }
+  to   { width: 100% }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Article Content ──────────────────────────────────────── */
+.article-body p {
+  font-size: 1.0625rem;
+  color: #333;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+  margin-top: 14px;
+}
+
+.article-body h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -0.02em;
+  margin: 8px 0 0;
+  scroll-margin-top: 80px;
+}
+
+.article-body h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -0.01em;
+  margin: 24px 0 8px;
+  scroll-margin-top: 80px;
+}
+
+/* Tiptap HTML output — lawbox / tipbox rendered from dangerouslySetInnerHTML */
+.article-body [data-type="lawbox"] {
+  border-left: 4px solid #0070F3;
+  background: #FAFAFA;
+  padding: 14px 18px;
+  margin: 20px 0;
+  font-size: 0.9375rem;
+  color: #333;
+  line-height: 1.65;
+}
+
+.article-body [data-type="lawbox"]::before {
+  content: attr(data-ref);
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0070F3;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.article-body [data-type="tipbox"] {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #EBF3FF;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 20px 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #1a4fa3;
+}
+
+.article-body [data-type="tipbox"]::before {
+  content: 'i';
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0070F3;
+  font-weight: 700;
+  font-size: 13px;
+  font-family: serif;
+  margin-top: 1px;
+}
+
+.article-body ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-top: 14px;
+  font-size: 1.0625rem;
+  color: #333;
+  line-height: 1.75;
+}
+
+.article-body ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin-top: 14px;
+  font-size: 1.0625rem;
+  color: #333;
+  line-height: 1.75;
+}
+
+.article-body li { margin-top: 4px; }
+.article-body strong { font-weight: 700; }
+.article-body em { font-style: italic; }
+
+.article-body a {
+  color: #0070F3;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Tiptap editor prose styles ──────────────────────────────── */
+.tiptap-prose {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: #333;
+  letter-spacing: -0.01em;
+  min-height: 460px;
+}
+
+.tiptap-prose h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -0.02em;
+  margin: 20px 0 4px;
+}
+
+.tiptap-prose h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -0.01em;
+  margin: 16px 0 4px;
+}
+
+.tiptap-prose p { margin-top: 12px; }
+.tiptap-prose p:first-child { margin-top: 0; }
+
+.tiptap-prose ul { list-style: disc; padding-left: 1.5rem; margin-top: 12px; }
+.tiptap-prose ol { list-style: decimal; padding-left: 1.5rem; margin-top: 12px; }
+.tiptap-prose li { margin-top: 4px; }
+
+.tiptap-prose strong { font-weight: 700; }
+.tiptap-prose em { font-style: italic; }
+.tiptap-prose a { color: #0070F3; text-decoration: underline; text-underline-offset: 2px; }
+
+.tiptap-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #bbb;
+  pointer-events: none;
+  height: 0;
+}

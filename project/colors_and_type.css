@@ -1,0 +1,212 @@
+/* ============================================================
+   DRIVEVER DESIGN SYSTEM — Colors & Typography
+   Version 1.0 | 2026
+   ============================================================ */
+
+/* ── Google Fonts: Pretendard via CDN ────────────────────────
+   Note: Pretendard is not on Google Fonts. Using the official
+   CDN from the Pretendard project (jsdelivr). Flag: if you
+   need self-hosted, download from github.com/orioncactus/pretendard
+   ──────────────────────────────────────────────────────────── */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+/* ── Base Color Tokens ───────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --color-bg:            #FFFFFF;
+  --color-surface:       #FAFAFA;
+  --color-surface-hover: #F3F4F6;
+
+  /* Foregrounds */
+  --color-fg-primary:    #111111;
+  --color-fg-secondary:  #555555;
+  --color-fg-tertiary:   #888888;
+  --color-fg-inverse:    #FFFFFF;
+
+  /* Accent — Vercel Blue */
+  --color-accent:        #0070F3;
+  --color-accent-hover:  #005DD1;
+  --color-accent-light:  #EBF3FF;
+  --color-accent-border: #B3D4FC;
+
+  /* Success — Safe Driving Green */
+  --color-success:       #10B981;
+  --color-success-light: #ECFDF5;
+  --color-success-border:#6EE7B7;
+
+  /* Warning (minimal use) */
+  --color-warning:       #F59E0B;
+  --color-warning-light: #FFFBEB;
+
+  /* Borders */
+  --color-border:        #EAEAEA;
+  --color-border-strong: #D1D5DB;
+}
+
+/* ── Semantic Color Aliases ──────────────────────────────── */
+:root {
+  --bg:                  var(--color-bg);
+  --fg:                  var(--color-fg-primary);
+  --fg2:                 var(--color-fg-secondary);
+  --fg3:                 var(--color-fg-tertiary);
+  --accent:              var(--color-accent);
+  --accent-hover:        var(--color-accent-hover);
+  --accent-bg:           var(--color-accent-light);
+  --success:             var(--color-success);
+  --success-bg:          var(--color-success-light);
+  --border:              var(--color-border);
+  --surface:             var(--color-surface);
+}
+
+/* ── Typography Scale ────────────────────────────────────── */
+:root {
+  /* Font families */
+  --font-sans:   'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  --font-mono:   'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  /* Font sizes */
+  --text-xs:     0.75rem;   /* 12px */
+  --text-sm:     0.8125rem; /* 13px */
+  --text-base:   1.0625rem; /* 17px — article body */
+  --text-md:     1.125rem;  /* 18px */
+  --text-lg:     1.25rem;   /* 20px */
+  --text-xl:     1.5rem;    /* 24px */
+  --text-2xl:    1.8rem;    /* H2 */
+  --text-3xl:    2.25rem;   /* 36px */
+  --text-4xl:    2.5rem;    /* H1 */
+
+  /* Font weights */
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-bold:      700;
+
+  /* Line heights */
+  --leading-tight:    1.25;
+  --leading-snug:     1.4;
+  --leading-normal:   1.6;
+  --leading-relaxed:  1.7; /* body text */
+  --leading-loose:    1.9;
+
+  /* Letter spacing */
+  --tracking-tight:   -0.02em;
+  --tracking-body:    -0.01em;
+  --tracking-normal:   0em;
+  --tracking-wide:     0.04em; /* badges, labels */
+}
+
+/* ── Spacing Scale ───────────────────────────────────────── */
+:root {
+  --space-1:   0.25rem;  /*  4px */
+  --space-2:   0.5rem;   /*  8px */
+  --space-3:   0.75rem;  /* 12px */
+  --space-4:   1rem;     /* 16px */
+  --space-5:   1.25rem;  /* 20px */
+  --space-6:   1.5rem;   /* 24px */
+  --space-8:   2rem;     /* 32px */
+  --space-10:  2.5rem;   /* 40px */
+  --space-12:  3rem;     /* 48px */
+  --space-16:  4rem;     /* 64px */
+  --space-20:  5rem;     /* 80px */
+}
+
+/* ── Border Radius ───────────────────────────────────────── */
+:root {
+  --radius-none:   0px;    /* law boxes — authoritative, sharp */
+  --radius-sm:     4px;    /* badges, chips, tags */
+  --radius-md:     8px;    /* cards, panels */
+  --radius-lg:     12px;   /* modals, large panels */
+  --radius-full:   9999px; /* pill buttons */
+}
+
+/* ── Shadows / Elevation ─────────────────────────────────── */
+:root {
+  --shadow-none:   none;
+  --shadow-xs:     0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:     0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:     0 10px 15px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.03);
+  --shadow-focus:  0 0 0 3px rgba(0,112,243,0.25); /* blue focus ring */
+}
+
+/* ── Transitions ─────────────────────────────────────────── */
+:root {
+  --transition-fast:   0.1s ease;
+  --transition-base:   0.15s ease;
+  --transition-slow:   0.25s ease;
+}
+
+/* ── Semantic Element Styles ─────────────────────────────── */
+body {
+  font-family:    var(--font-sans);
+  font-size:      var(--text-base);
+  line-height:    var(--leading-relaxed);
+  letter-spacing: var(--tracking-body);
+  color:          var(--fg);
+  background:     var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1 {
+  font-size:      var(--text-4xl);
+  font-weight:    var(--weight-bold);
+  line-height:    var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color:          var(--fg);
+  margin:         0 0 var(--space-6);
+}
+
+h2 {
+  font-size:      var(--text-2xl);
+  font-weight:    var(--weight-bold);
+  line-height:    var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color:          var(--fg);
+  margin:         var(--space-10) 0 var(--space-4);
+}
+
+h3 {
+  font-size:      var(--text-lg);
+  font-weight:    var(--weight-semibold);
+  line-height:    var(--leading-snug);
+  color:          var(--fg);
+  margin:         var(--space-8) 0 var(--space-3);
+}
+
+p {
+  margin:         0 0 var(--space-5);
+  color:          var(--fg);
+}
+
+a {
+  color:          var(--accent);
+  text-decoration: none;
+  transition:     color var(--transition-base);
+}
+a:hover {
+  color:          var(--accent-hover);
+  text-decoration: underline;
+}
+a:focus-visible {
+  outline:        2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius:  2px;
+}
+
+code, kbd {
+  font-family:    var(--font-mono);
+  font-size:      0.875em;
+  background:     var(--surface);
+  border:         1px solid var(--border);
+  border-radius:  var(--radius-sm);
+  padding:        0.1em 0.4em;
+}
+
+blockquote {
+  border-left:    4px solid var(--accent);
+  background:     var(--surface);
+  margin:         var(--space-6) 0;
+  padding:        var(--space-4) var(--space-6);
+  color:          var(--fg2);
+}
