@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { INITIAL_POSTS } from '@/lib/data'
+import { supabase, rowToPost, PostRow } from '@/lib/supabase'
 import ArticleClient from '@/components/article/ArticleClient'
+
+export const dynamicParams = true
 
 interface Props {
   params: Promise<{ id: string }>
@@ -13,8 +16,16 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const post = INITIAL_POSTS.find((p) => p.id === Number(id))
+  const numId = Number(id)
+  const staticPost = INITIAL_POSTS.find((p) => p.id === numId)
+
+  const post = staticPost ?? await (async () => {
+    const { data } = await supabase.from('posts').select('*').eq('id', numId).single()
+    return data ? rowToPost(data as PostRow) : null
+  })()
+
   if (!post) return {}
+
   return {
     title: post.title,
     description: post.description,
@@ -67,13 +78,29 @@ function ArticleJsonLd({ post }: { post: (typeof INITIAL_POSTS)[0] }) {
 
 export default async function ArticlePage({ params }: Props) {
   const { id } = await params
-  const staticPost = INITIAL_POSTS.find((p) => p.id === Number(id))
-  if (!staticPost) notFound()
+  const numId = Number(id)
+
+  const staticPost = INITIAL_POSTS.find((p) => p.id === numId)
+
+  if (staticPost) {
+    return (
+      <>
+        <ArticleJsonLd post={staticPost} />
+        <ArticleClient postId={numId} staticPost={staticPost} allStaticPosts={INITIAL_POSTS} />
+      </>
+    )
+  }
+
+  // Supabase fallback for admin-created posts
+  const { data } = await supabase.from('posts').select('*').eq('id', numId).single()
+  if (!data) notFound()
+
+  const post = rowToPost(data as PostRow)
 
   return (
     <>
-      <ArticleJsonLd post={staticPost} />
-      <ArticleClient postId={Number(id)} staticPost={staticPost} allStaticPosts={INITIAL_POSTS} />
+      <ArticleJsonLd post={post} />
+      <ArticleClient postId={numId} staticPost={post} allStaticPosts={INITIAL_POSTS} />
     </>
   )
 }

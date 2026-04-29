@@ -77,8 +77,18 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
 
   const autoFill = (postId: string) => {
     const post = published.find((p) => p.id === Number(postId))
-    if (post) setForm((f) => ({ ...f, postId, category: post.category, title: post.title, description: post.description }))
-    else setForm((f) => ({ ...f, postId }))
+    if (post) {
+      setForm((f) => ({
+        ...f,
+        postId,
+        category:    post.category,
+        title:       post.title,
+        description: post.description,
+        image:       post.thumbnail ?? f.image,   // thumbnail as default; manual URL overrides
+      }))
+    } else {
+      setForm((f) => ({ ...f, postId }))
+    }
   }
 
   const saveSlide = () => {
@@ -212,8 +222,8 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
             <MField label="디스크립션">
               <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} placeholder="배너 설명" className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none resize-y" />
             </MField>
-            <MField label="배경 이미지 URL (선택)">
-              <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://images.unsplash.com/..." className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none" />
+            <MField label="배경 이미지 URL">
+              <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="포스트 선택 시 썸네일 자동 입력 — 직접 URL 입력 시 우선 적용" className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none" />
             </MField>
             <MField label="배경 그라디언트">
               <div className="grid grid-cols-3 gap-2 mt-2">

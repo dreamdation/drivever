@@ -19,6 +19,7 @@ export interface Post {
   readTime: number
   tags: string[]
   thumbnail?: string
+  views?: number
   content: ContentBlock[]
   bodyHtml?: string
 }

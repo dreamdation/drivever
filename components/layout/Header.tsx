@@ -1,32 +1,111 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Search, User, Menu, X } from 'lucide-react'
 import { useBlogStore } from '@/store/blogStore'
 import { cn } from '@/lib/utils'
 
-const NAV_LINKS = [
-  { href: '/',        label: '홈',             match: '/' },
-  { href: '/about',   label: '블로그 소개',     match: '/about' },
-  { href: '/blog?cat=교통법규',       label: '교통법규',       match: '/blog' },
-  { href: '/blog?cat=안전운전',       label: '안전운전',       match: '' },
-  { href: '/blog?cat=Premium Garage', label: 'Premium Garage', match: '' },
+type NavLink = {
+  href:  string
+  label: string
+  path?: string   // exact pathname match
+  cat?:  string   // /blog?cat=xxx match
+}
+
+const NAV_LINKS: NavLink[] = [
+  { href: '/',                         label: '홈' },
+  { href: '/about',                    label: '블로그 소개',    path: '/about' },
+  { href: '/blog?cat=교통법규',        label: '교통법규',       cat: '교통법규' },
+  { href: '/blog?cat=안전운전',        label: '안전운전',       cat: '안전운전' },
+  { href: '/blog?cat=Premium Garage',  label: 'Premium Garage', cat: 'Premium Garage' },
 ]
+
+// Inner component that reads searchParams — must be inside Suspense
+function NavLinks({ mobile, onMobileClose }: { mobile?: boolean; onMobileClose?: () => void }) {
+  const pathname     = usePathname()
+  const searchParams = useSearchParams()
+
+  const isActive = (link: NavLink) => {
+    if (link.cat)  return pathname === '/blog' && searchParams.get('cat') === link.cat
+    if (link.path) return pathname === link.path
+    return pathname === '/'
+  }
+
+  if (mobile) {
+    return (
+      <>
+        {NAV_LINKS.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            onClick={onMobileClose}
+            className={cn(
+              'px-3 py-2.5 text-sm font-medium rounded-[6px] transition-colors',
+              isActive(l) ? 'text-accent bg-accent-light' : 'text-fg-2'
+            )}
+          >
+            {l.label}
+          </Link>
+        ))}
+      </>
+    )
+  }
+
+  return (
+    <>
+      {NAV_LINKS.map((l) => (
+        <Link
+          key={l.href}
+          href={l.href}
+          className={cn(
+            'px-3 py-1.5 text-sm font-medium rounded-[6px] transition-colors duration-150',
+            isActive(l)
+              ? 'text-accent bg-accent-light'
+              : 'text-fg-2 hover:text-accent'
+          )}
+        >
+          {l.label}
+        </Link>
+      ))}
+    </>
+  )
+}
+
+// Fallback: same links without active state (shown during SSR/suspense)
+function NavLinksFallback({ mobile }: { mobile?: boolean }) {
+  if (mobile) {
+    return (
+      <>
+        {NAV_LINKS.map((l) => (
+          <Link key={l.href} href={l.href} className="px-3 py-2.5 text-sm font-medium rounded-[6px] text-fg-2">
+            {l.label}
+          </Link>
+        ))}
+      </>
+    )
+  }
+  return (
+    <>
+      {NAV_LINKS.map((l) => (
+        <Link key={l.href} href={l.href} className="px-3 py-1.5 text-sm font-medium rounded-[6px] text-fg-2 hover:text-accent transition-colors duration-150">
+          {l.label}
+        </Link>
+      ))}
+    </>
+  )
+}
 
 interface HeaderProps {
   onSearchOpen: () => void
 }
 
 export default function Header({ onSearchOpen }: HeaderProps) {
-  const pathname = usePathname()
   const router = useRouter()
   const { isLoggedIn } = useBlogStore()
   const [mobileOpen, setMobileOpen] = useState(false)
-
-  const isActive = (match: string) => match && pathname === match
 
   return (
     <header
@@ -57,20 +136,9 @@ export default function Header({ onSearchOpen }: HeaderProps) {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex gap-0.5 flex-1">
-          {NAV_LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-[6px] transition-colors duration-150',
-                isActive(l.match)
-                  ? 'text-accent bg-accent-light'
-                  : 'text-fg-2 hover:text-accent'
-              )}
-            >
-              {l.label}
-            </Link>
-          ))}
+          <Suspense fallback={<NavLinksFallback />}>
+            <NavLinks />
+          </Suspense>
         </nav>
 
         {/* Actions */}
@@ -118,19 +186,9 @@ export default function Header({ onSearchOpen }: HeaderProps) {
           style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
         >
           <nav className="flex flex-col py-2 px-4">
-            {NAV_LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'px-3 py-2.5 text-sm font-medium rounded-[6px] transition-colors',
-                  isActive(l.match) ? 'text-accent bg-accent-light' : 'text-fg-2'
-                )}
-              >
-                {l.label}
-              </Link>
-            ))}
+            <Suspense fallback={<NavLinksFallback mobile />}>
+              <NavLinks mobile onMobileClose={() => setMobileOpen(false)} />
+            </Suspense>
           </nav>
         </div>
       )}

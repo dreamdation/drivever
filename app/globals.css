@@ -217,6 +217,21 @@
   text-underline-offset: 2px;
 }
 
+.article-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.tiptap-prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 16px 0;
+  display: block;
+}
+
 /* ── Tiptap editor prose styles ──────────────────────────────── */
 .tiptap-prose {
   font-size: 0.9375rem;

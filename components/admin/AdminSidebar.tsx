@@ -1,10 +1,10 @@
 'use client'
 
 import Image from 'next/image'
-import { LayoutGrid, PenSquare, LayoutTemplate, ExternalLink, LogOut } from 'lucide-react'
+import { LayoutGrid, PenSquare, LayoutTemplate, MessageSquare, ExternalLink, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type AdminView = 'dashboard' | 'editor' | 'hero'
+export type AdminView = 'dashboard' | 'editor' | 'hero' | 'comments'
 
 interface AdminSidebarProps {
   view: AdminView
@@ -17,6 +17,7 @@ const NAV = [
   { id: 'dashboard' as AdminView, icon: LayoutGrid,      label: '포스트 관리' },
   { id: 'editor'    as AdminView, icon: PenSquare,       label: '새 글 작성' },
   { id: 'hero'      as AdminView, icon: LayoutTemplate,  label: '히어로 관리' },
+  { id: 'comments'  as AdminView, icon: MessageSquare,   label: '댓글 관리' },
 ]
 
 export default function AdminSidebar({ view, onNavigate, onLogout, onGoSite }: AdminSidebarProps) {

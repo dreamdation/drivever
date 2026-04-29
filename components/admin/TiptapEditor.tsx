@@ -1,11 +1,15 @@
 'use client'
 
+import { useState, useRef } from 'react'
 import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, NodeViewProps } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import LinkExt from '@tiptap/extension-link'
+import ImageExt from '@tiptap/extension-image'
 import { Node, mergeAttributes } from '@tiptap/core'
-import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Link, Scale, Lightbulb, Unlink } from 'lucide-react'
+import imageCompression from 'browser-image-compression'
+import { supabase } from '@/lib/supabase'
+import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Link, Scale, Lightbulb, Unlink, ImageIcon, Loader2 } from 'lucide-react'
 
 // ── Custom node: LawBox ─────────────────────────────────────────
 
@@ -43,7 +47,7 @@ const LawBoxNode = Node.create({
   },
 })
 
-// ── Custom node: TipBox ─────────────────────────────────────────
+// ── Custom node: TipBox ────────────────────────────────────��────
 
 function TipBoxView(_props: NodeViewProps) {
   return (
@@ -93,7 +97,7 @@ function Divider() {
   return <div style={{ width: '1px', height: '20px', background: '#EAEAEA', margin: '0 4px' }} />
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, extraRight }: { editor: Editor | null; extraRight?: React.ReactNode }) {
   if (!editor) return null
 
   const addLink = () => {
@@ -154,6 +158,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       >
         <Lightbulb size={11} /> 팁 박스
       </button>
+      {extraRight}
     </div>
   )
 }
@@ -166,6 +171,9 @@ interface TiptapEditorProps {
 }
 
 export default function TiptapEditor({ initialContent, onChange }: TiptapEditorProps) {
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -176,6 +184,7 @@ export default function TiptapEditor({ initialContent, onChange }: TiptapEditorP
       }),
       Placeholder.configure({ placeholder: '본문을 작성하세요...' }),
       LinkExt.configure({ openOnClick: false, HTMLAttributes: { class: 'tiptap-link' } }),
+      ImageExt.configure({ inline: false, allowBase64: false }),
       LawBoxNode,
       TipBoxNode,
     ],
@@ -186,9 +195,73 @@ export default function TiptapEditor({ initialContent, onChange }: TiptapEditorP
     },
   })
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !editor) return
+    e.target.value = ''
+
+    setUploading(true)
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      })
+
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+      const { error } = await supabase.storage
+        .from('post-images')
+        .upload(fileName, compressed, { contentType: compressed.type, upsert: false })
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(fileName)
+
+      editor.chain().focus().setImage({ src: publicUrl }).run()
+    } catch (err) {
+      console.error('Image upload failed:', err)
+      alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const imageBtn = (
+    <>
+      <Divider />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
+      <button
+        type="button"
+        title="이미지 업로드"
+        disabled={uploading}
+        onMouseDown={(e) => { e.preventDefault(); fileInputRef.current?.click() }}
+        className="flex items-center gap-1 px-2.5 py-1 rounded-[5px] text-[11px] font-semibold transition-colors font-[inherit]"
+        style={{
+          background: '#F0FFF4',
+          color: uploading ? '#aaa' : '#059669',
+          border: '1px solid #A7F3D0',
+          cursor: uploading ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {uploading ? <Loader2 size={11} className="animate-spin" /> : <ImageIcon size={11} />}
+        {uploading ? '업로드 중...' : '이미지'}
+      </button>
+    </>
+  )
+
   return (
     <div className="border border-border rounded-[8px] overflow-hidden">
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} extraRight={imageBtn} />
       <div className="px-5 py-5 min-h-[480px]">
         <EditorContent editor={editor} />
       </div>

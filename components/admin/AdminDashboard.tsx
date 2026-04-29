@@ -3,34 +3,83 @@
 import { useState } from 'react'
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
 import { Post } from '@/lib/types'
-import { getCategoryStyle } from '@/lib/utils'
 
 const CAT_COLOR: Record<string, string> = {
-  '교통법규': '#0070F3',
+  '교통법규':       '#0070F3',
   'Premium Garage': '#7C3AED',
-  '안전운전': '#059669',
-  '차량관리': '#D97706',
+  '안전운전':       '#059669',
+  '차량관리':       '#D97706',
 }
+const CATS = ['전체', '교통법규', 'Premium Garage', '안전운전', '차량관리']
+
+type SortKey = 'date' | 'status' | 'views' | 'comments'
+
+type ColDef = { key: string; label: string; sortable?: SortKey }
+
+const COLS: ColDef[] = [
+  { key: 'title',    label: '제목' },
+  { key: 'category', label: '카테고리' },
+  { key: 'date',     label: '작성일',    sortable: 'date' },
+  { key: 'views',    label: '조회수',    sortable: 'views' },
+  { key: 'comments', label: '댓글수',    sortable: 'comments' },
+  { key: 'readTime', label: '읽는 시간' },
+  { key: 'status',   label: '상태',      sortable: 'status' },
+  { key: 'actions',  label: '관리' },
+]
 
 interface AdminDashboardProps {
   posts: Post[]
+  commentCounts?: Record<number, number>
   onEdit: (post: Post) => void
   onNew: () => void
   onTogglePublish: (id: number) => void
   onDelete: (id: number) => void
 }
 
-export default function AdminDashboard({ posts, onEdit, onNew, onTogglePublish, onDelete }: AdminDashboardProps) {
-  const [filter, setFilter] = useState('전체')
-  const [search, setSearch] = useState('')
+export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNew, onTogglePublish, onDelete }: AdminDashboardProps) {
+  const [statusFilter, setStatusFilter] = useState('전체')
+  const [catFilter,    setCatFilter]    = useState('전체')
+  const [search,       setSearch]       = useState('')
+  const [sortKey,      setSortKey]      = useState<SortKey | null>(null)
+  const [sortDir,      setSortDir]      = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('desc') }
+  }
+
+  const catCount = (cat: string) =>
+    cat === '전체' ? posts.length : posts.filter((p) => p.category === cat).length
 
   const filtered = posts.filter((p) => {
-    const matchCat =
-      filter === '전체' ||
-      (filter === '발행' && p.published !== false) ||
-      (filter === '임시저장' && p.published === false)
-    const matchQ = !search || p.title.includes(search) || p.category.includes(search)
-    return matchCat && matchQ
+    const matchStatus =
+      statusFilter === '전체' ||
+      (statusFilter === '발행'     && p.published !== false) ||
+      (statusFilter === '임시저장' && p.published === false)
+    const matchCat = catFilter === '전체' || p.category === catFilter
+    const q = search.toLowerCase()
+    const matchQ = !search || p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
+    return matchStatus && matchCat && matchQ
+  })
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sortKey) return 0
+    if (sortKey === 'date') {
+      const cmp = a.date.localeCompare(b.date)
+      return sortDir === 'desc' ? -cmp : cmp
+    }
+    if (sortKey === 'views') {
+      const cmp = (a.views ?? 0) - (b.views ?? 0)
+      return sortDir === 'desc' ? -cmp : cmp
+    }
+    if (sortKey === 'comments') {
+      const cmp = (commentCounts[a.id] ?? 0) - (commentCounts[b.id] ?? 0)
+      return sortDir === 'desc' ? -cmp : cmp
+    }
+    // status
+    const aVal = a.published !== false ? 1 : 0
+    const bVal = b.published !== false ? 1 : 0
+    return sortDir === 'desc' ? bVal - aVal : aVal - bVal
   })
 
   return (
@@ -53,30 +102,55 @@ export default function AdminDashboard({ posts, onEdit, onNew, onTogglePublish, 
       </div>
 
       {/* Filter bar */}
-      <div className="flex gap-3 items-center mb-5">
-        <div className="flex gap-1">
-          {['전체', '발행', '임시저장'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="px-3.5 py-[5px] text-xs font-semibold rounded-sm border-none font-[inherit] transition-colors"
-              style={{
-                background: filter === f ? '#EBF3FF' : '#F3F4F6',
-                color: filter === f ? '#0070F3' : '#555',
-              }}
-            >
-              {f}
-            </button>
-          ))}
+      <div className="flex flex-col gap-2 mb-5">
+        {/* Row 1: status chips + search */}
+        <div className="flex gap-3 items-center">
+          <div className="flex gap-1">
+            {['전체', '발행', '임시저장'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setStatusFilter(f)}
+                className="px-3.5 py-[5px] text-xs font-semibold rounded-sm border-none font-[inherit] transition-colors"
+                style={{
+                  background: statusFilter === f ? '#EBF3FF' : '#F3F4F6',
+                  color:      statusFilter === f ? '#0070F3' : '#555',
+                }}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 border border-border rounded-[6px] px-3 py-1.5 bg-white">
+            <Search size={13} className="text-[#aaa]" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="제목·카테고리 검색..."
+              className="border-none outline-none text-sm text-fg w-[200px] bg-transparent"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2 border border-border rounded-[6px] px-3 py-1.5 bg-white">
-          <Search size={13} className="text-[#aaa]" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="제목·카테고리 검색..."
-            className="border-none outline-none text-sm text-fg w-[200px] bg-transparent"
-          />
+
+        {/* Row 2: category chips with post counts */}
+        <div className="flex gap-1 flex-wrap">
+          {CATS.map((cat) => {
+            const color = CAT_COLOR[cat] ?? '#0070F3'
+            const active = catFilter === cat
+            return (
+              <button
+                key={cat}
+                onClick={() => setCatFilter(cat)}
+                className="px-3 py-[4px] text-xs font-semibold rounded-full border-none font-[inherit] transition-colors"
+                style={{
+                  background: active ? `${color}18` : '#F3F4F6',
+                  color:      active ? color : '#555',
+                  border:     active ? `1px solid ${color}40` : '1px solid transparent',
+                }}
+              >
+                {cat} ({catCount(cat)})
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -85,22 +159,37 @@ export default function AdminDashboard({ posts, onEdit, onNew, onTogglePublish, 
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-surface border-b border-border">
-              {['제목', '카테고리', '작성일', '읽는 시간', '상태', '관리'].map((h) => (
-                <th key={h} className="px-4 py-2.5 text-left text-[11px] font-bold text-fg-3" style={{ letterSpacing: '0.04em' }}>
-                  {h}
+              {COLS.map((col) => (
+                <th
+                  key={col.key}
+                  className="px-4 py-2.5 text-left text-[11px] font-bold text-fg-3 select-none"
+                  style={{ letterSpacing: '0.04em', cursor: col.sortable ? 'pointer' : 'default' }}
+                  onClick={() => col.sortable && handleSort(col.sortable)}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {col.label}
+                    {col.sortable && (
+                      <span
+                        className="text-[10px] leading-none"
+                        style={{ color: sortKey === col.sortable ? '#0070F3' : '#ccc' }}
+                      >
+                        {sortKey === col.sortable ? (sortDir === 'desc' ? '▼' : '▲') : '▲▼'}
+                      </span>
+                    )}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p, i) => {
+            {sorted.map((p) => {
               const cc = CAT_COLOR[p.category] || '#555'
               return (
                 <tr
                   key={p.id}
                   className="border-b border-border last:border-0 hover:bg-surface transition-colors duration-100"
                 >
-                  <td className="px-4 py-3 text-sm font-semibold text-fg max-w-[280px]">
+                  <td className="px-4 py-3 text-sm font-semibold text-fg max-w-[220px]">
                     <div className="overflow-hidden text-ellipsis whitespace-nowrap">{p.title}</div>
                   </td>
                   <td className="px-4 py-3 text-sm">
@@ -111,7 +200,13 @@ export default function AdminDashboard({ posts, onEdit, onNew, onTogglePublish, 
                       {p.category}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-fg-3">{p.date}</td>
+                  <td className="px-4 py-3 text-xs text-fg-3 whitespace-nowrap">{p.date}</td>
+                  <td className="px-4 py-3 text-xs text-fg-3 tabular-nums">
+                    {(p.views ?? 0).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-fg-3 tabular-nums">
+                    {(commentCounts[p.id] ?? 0).toLocaleString()}
+                  </td>
                   <td className="px-4 py-3 text-xs text-fg-3">{p.readTime}분</td>
                   <td className="px-4 py-3">
                     <button
@@ -119,7 +214,7 @@ export default function AdminDashboard({ posts, onEdit, onNew, onTogglePublish, 
                       className="px-2.5 py-[3px] rounded-full border-none cursor-pointer text-[11px] font-bold font-[inherit] transition-all duration-150"
                       style={{
                         background: p.published !== false ? '#ECFDF5' : '#F3F4F6',
-                        color: p.published !== false ? '#059669' : '#888',
+                        color:      p.published !== false ? '#059669' : '#888',
                       }}
                     >
                       {p.published !== false ? '발행중' : '임시저장'}
@@ -134,9 +229,7 @@ export default function AdminDashboard({ posts, onEdit, onNew, onTogglePublish, 
                         <Pencil size={13} />수정
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('이 포스트를 삭제하시겠습니까?')) onDelete(p.id)
-                        }}
+                        onClick={() => { if (confirm('이 포스트를 삭제하시겠습니까?')) onDelete(p.id) }}
                         className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit]"
                       >
                         <Trash2 size={13} />삭제
@@ -146,9 +239,9 @@ export default function AdminDashboard({ posts, onEdit, onNew, onTogglePublish, 
                 </tr>
               )
             })}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-fg-3">
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-fg-3">
                   검색 결과가 없습니다.
                 </td>
               </tr>

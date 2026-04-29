@@ -22,7 +22,7 @@ interface ArticleClientProps {
 }
 
 export default function ArticleClient({ postId, staticPost, allStaticPosts }: ArticleClientProps) {
-  const { posts: storePosts, _hydrated } = useBlogStore()
+  const { posts: storePosts, _hydrated, incrementViews } = useBlogStore()
   const allPosts = _hydrated ? storePosts : allStaticPosts
   const post = allPosts.find((p) => p.id === postId) ?? staticPost
 
@@ -35,6 +35,12 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
     .slice(0, 4)
 
   const hasToc = (post.content ?? []).some((b) => b.type === 'h2' || b.type === 'h3')
+
+  // Increment view count once after store hydration
+  useEffect(() => {
+    if (!_hydrated) return
+    incrementViews(postId)
+  }, [_hydrated, postId, incrementViews])
 
   // Intersection Observer for active TOC section
   useEffect(() => {
