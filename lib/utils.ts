@@ -27,3 +27,14 @@ export function getCategoryColorFromName(category: string): CategoryColor {
 export function formatDate(iso: string): string {
   return iso.replace(/-/g, '.')
 }
+
+export function toSlug(title: string): string {
+  return title
+    .trim()
+    .replace(/[—–·×÷()/\\%&@#$^*+=\[\]{}<>~`"'!?|]/g, ' ')
+    .replace(/[^가-힣a-zA-Z0-9\s]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase()
+}

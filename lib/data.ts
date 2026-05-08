@@ -2,7 +2,8 @@ import { Post, HeroSlide } from './types'
 
 export const INITIAL_POSTS: Post[] = [
   {
-    id: 1, category: '교통법규', categoryColor: 'blue', published: true, isNew: true,
+    id: 1, slug: '2025년-달라진-교통법규-총정리-음주운전-스쿨존-우회전',
+    category: '교통법규', categoryColor: 'blue', published: true, isNew: true,
     title: '2025년 달라진 교통법규 총정리 — 음주운전·스쿨존·우회전',
     description: '2025년 시행된 도로교통법 주요 개정사항을 정리했습니다. 음주운전 처벌 기준 강화, 스쿨존 단속 확대, 우회전 일시정지 의무화까지 한눈에 확인하세요.',
     date: '2025.04.20', readTime: 6,
@@ -21,7 +22,8 @@ export const INITIAL_POSTS: Post[] = [
     ],
   },
   {
-    id: 2, category: 'Premium Garage', categoryColor: 'purple', published: true,
+    id: 2, slug: 'audi-q7-55-tfsi-6개월-실연비-리포트-가솔린-대형-suv의-현실',
+    category: 'Premium Garage', categoryColor: 'purple', published: true,
     title: 'Audi Q7 55 TFSI 6개월 실연비 리포트 — 가솔린 대형 SUV의 현실',
     description: '2023년식 Q7 55 TFSI를 6개월간 직접 운행하며 기록한 연비 데이터 공개. 고속도로·도심·혼합 모드별 실측값과 연비 방어 팁을 정리했습니다.',
     date: '2025.04.10', readTime: 8,
@@ -36,7 +38,8 @@ export const INITIAL_POSTS: Post[] = [
     ],
   },
   {
-    id: 3, category: '안전운전', categoryColor: 'green', published: true,
+    id: 3, slug: '고속도로-야간-운전-안전수칙-사고의-70-는-예방-가능하다',
+    category: '안전운전', categoryColor: 'green', published: true,
     title: '고속도로 야간 운전 안전수칙 — 사고의 70%는 예방 가능하다',
     description: '야간 고속도로 사고의 주요 원인과 예방법. 졸음운전 징후 포착부터 전조등 관리까지 베테랑 운전자의 실전 팁을 담았습니다.',
     date: '2025.03.28', readTime: 5,
@@ -51,7 +54,8 @@ export const INITIAL_POSTS: Post[] = [
     ],
   },
   {
-    id: 4, category: '교통법규', categoryColor: 'blue', published: true,
+    id: 4, slug: '자전거-전동킥보드-도로-공유-법규-완벽-정리',
+    category: '교통법규', categoryColor: 'blue', published: true,
     title: '자전거·전동킥보드 도로 공유 법규 완벽 정리',
     description: '전동킥보드(PM)와 자전거가 일반 차로를 이용할 수 있는 조건, 운전자의 의무, 사고 시 과실 비율 기준까지 정리했습니다.',
     date: '2025.03.15', readTime: 5,
@@ -64,7 +68,8 @@ export const INITIAL_POSTS: Post[] = [
     ],
   },
   {
-    id: 5, category: 'Premium Garage', categoryColor: 'purple', published: true,
+    id: 5, slug: 'q7-csp-esp-보증-패키지-완벽-가이드-실제-청구-사례-포함',
+    category: 'Premium Garage', categoryColor: 'purple', published: true,
     title: 'Q7 CSP/ESP 보증 패키지 완벽 가이드 — 실제 청구 사례 포함',
     description: 'Audi 공식 연장 보증(CSP)과 추가 보증(ESP)의 실제 커버 항목과 청구 절차. 직접 청구해본 사례를 기반으로 작성했습니다.',
     date: '2025.03.01', readTime: 7,
@@ -77,7 +82,8 @@ export const INITIAL_POSTS: Post[] = [
     ],
   },
   {
-    id: 6, category: '차량관리', categoryColor: 'blue', published: true,
+    id: 6, slug: '타이어-교체-시기와-비용-절약법-브랜드별-마모-데이터',
+    category: '차량관리', categoryColor: 'blue', published: true,
     title: '타이어 교체 시기와 비용 절약법 — 브랜드별 마모 데이터',
     description: '타이어 교체 시기를 정확히 판단하는 법과 동급 타이어 브랜드 간 가격·성능 비교. 불필요한 조기 교체를 막는 실전 팁.',
     date: '2025.02.20', readTime: 6,
@@ -90,7 +96,8 @@ export const INITIAL_POSTS: Post[] = [
     ],
   },
   {
-    id: 7, category: '안전운전', categoryColor: 'green', published: false,
+    id: 7, slug: '장마철-빗길-운전-완전-가이드-수막현상과-제동거리-계산법',
+    category: '안전운전', categoryColor: 'green', published: false,
     title: '장마철 빗길 운전 완전 가이드 — 수막현상과 제동거리 계산법',
     description: '장마철 수막현상(하이드로플레이닝) 발생 조건과 탈출법, 빗길 안전 제동거리 계산법을 정리했습니다.',
     date: '2025.02.10', readTime: 5,
@@ -100,7 +107,8 @@ export const INITIAL_POSTS: Post[] = [
     ],
   },
   {
-    id: 8, category: '교통법규', categoryColor: 'blue', published: false,
+    id: 8, slug: '주차-위반-과태료-총정리-구역별-금액과-이의신청-방법',
+    category: '교통법규', categoryColor: 'blue', published: false,
     title: '주차 위반 과태료 총정리 — 구역별 금액과 이의신청 방법',
     description: '소화전 앞, 버스 정류장, 교차로, 황색 실선 등 주차 금지 구역별 과태료 금액과 실제 이의신청 성공 사례를 정리했습니다.',
     date: '2025.01.30', readTime: 4,

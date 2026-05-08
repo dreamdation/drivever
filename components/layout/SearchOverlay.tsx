@@ -70,7 +70,7 @@ export default function SearchOverlay({ posts, onClose }: SearchOverlayProps) {
             <button
               key={p.id}
               className="block w-full px-1 py-2.5 border-b border-[#f3f3f3] last:border-0 text-left hover:bg-surface transition-colors duration-100 rounded"
-              onClick={() => { router.push(`/blog/${p.id}`); onClose() }}
+              onClick={() => { router.push(`/blog/${p.slug}`); onClose() }}
             >
               <div className="text-[0.9375rem] font-semibold text-fg mb-1 leading-snug">{p.title}</div>
               <div className="text-[11px] text-[#aaa]">{p.category} · {p.date}</div>

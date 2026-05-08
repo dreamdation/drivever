@@ -37,12 +37,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <head>
         {/* Pretendard Variable font — loaded via CSS @import in globals.css */}
         <link rel="icon" href="/favicon-drivever-512.png" type="image/png" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <SiteShell>{children}</SiteShell>
       </body>
     </html>

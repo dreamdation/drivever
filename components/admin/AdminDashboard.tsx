@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
 import { Post } from '@/lib/types'
 
@@ -17,6 +17,7 @@ type SortKey = 'date' | 'status' | 'views' | 'comments'
 type ColDef = { key: string; label: string; sortable?: SortKey }
 
 const COLS: ColDef[] = [
+  { key: 'no',      label: 'No.' },
   { key: 'title',    label: '제목' },
   { key: 'category', label: '카테고리' },
   { key: 'date',     label: '작성일',    sortable: 'date' },
@@ -42,11 +43,47 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
   const [search,       setSearch]       = useState('')
   const [sortKey,      setSortKey]      = useState<SortKey | null>(null)
   const [sortDir,      setSortDir]      = useState<'asc' | 'desc'>('desc')
+  const [titleWidth,   setTitleWidth]   = useState(460)
+  const [isDragging,   setIsDragging]   = useState(false)
+  const resizingRef   = useRef(false)
+  const startXRef     = useRef(0)
+  const startWidthRef = useRef(0)
+
+  // Fixed widths (px) for all non-title columns
+  const COL_W = { no: 52, category: 130, date: 100, views: 88, comments: 88, readTime: 92, status: 100, actions: 130 }
+  const FIXED_W = Object.values(COL_W).reduce((a, b) => a + b, 0) // 676
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    resizingRef.current   = true
+    startXRef.current     = e.clientX
+    startWidthRef.current = titleWidth
+    setIsDragging(true)
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return
+      const next = Math.max(120, Math.min(600, startWidthRef.current + ev.clientX - startXRef.current))
+      setTitleWidth(next)
+    }
+    const onUp = () => {
+      resizingRef.current = false
+      setIsDragging(false)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup',   onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup',   onUp)
+  }
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(key); setSortDir('desc') }
   }
+
+  // Stable post number: oldest = 1, newest = N (independent of display sort)
+  const postNoMap = new Map(
+    [...posts].sort((a, b) => a.date.localeCompare(b.date)).map((p, i) => [p.id, i + 1])
+  )
 
   const catCount = (cat: string) =>
     cat === '전체' ? posts.length : posts.filter((p) => p.category === cat).length
@@ -83,7 +120,7 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
   })
 
   return (
-    <div className="p-8 max-w-[960px]">
+    <div className="p-8 max-w-[1200px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-7">
         <div>
@@ -155,15 +192,35 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
       </div>
 
       {/* Table */}
-      <div className="border border-border rounded-[8px] overflow-hidden">
-        <table className="w-full border-collapse">
+      <div className="border border-border rounded-[8px] overflow-hidden bg-surface">
+        <table
+          className="border-collapse"
+          style={{ tableLayout: 'fixed', width: '100%', minWidth: titleWidth + FIXED_W }}
+        >
+          <colgroup>
+            <col style={{ width: COL_W.no }} />
+            <col style={{ width: titleWidth }} />
+            <col style={{ width: COL_W.category }} />
+            <col style={{ width: COL_W.date }} />
+            <col style={{ width: COL_W.views }} />
+            <col style={{ width: COL_W.comments }} />
+            <col style={{ width: COL_W.readTime }} />
+            <col style={{ width: COL_W.status }} />
+            <col style={{ width: COL_W.actions }} />
+            <col />
+          </colgroup>
           <thead>
-            <tr className="bg-surface border-b border-border">
+            <tr className="border-b border-border">
               {COLS.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-2.5 text-left text-[11px] font-bold text-fg-3 select-none"
-                  style={{ letterSpacing: '0.04em', cursor: col.sortable ? 'pointer' : 'default' }}
+                  className="px-4 py-2.5 text-[11px] font-bold text-fg-3 select-none whitespace-nowrap"
+                  style={{
+                    letterSpacing: '0.04em',
+                    cursor: col.sortable ? 'pointer' : 'default',
+                    position: col.key === 'title' ? 'relative' : undefined,
+                    textAlign: col.key === 'no' ? 'center' : 'left',
+                  }}
                   onClick={() => col.sortable && handleSort(col.sortable)}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -177,8 +234,48 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
                       </span>
                     )}
                   </span>
+                  {col.key === 'title' && (
+                    <div
+                      onMouseDown={startResize}
+                      title="드래그하여 너비 조절"
+                      className="group/handle"
+                      style={{
+                        position: 'absolute', right: 0, top: 0, bottom: 0,
+                        width: 14, cursor: 'col-resize', zIndex: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderRadius: '0 2px 2px 0',
+                        background: isDragging ? 'rgba(0,112,243,0.08)' : 'transparent',
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      {/* 드래그 활성 시: 전체 높이 파란 선 */}
+                      {isDragging && (
+                        <div style={{
+                          position: 'absolute', right: 0, top: 0, bottom: 0,
+                          width: 2, background: '#0070F3', borderRadius: 1,
+                        }} />
+                      )}
+                      {/* 기본/호버: 3점 그립 아이콘 */}
+                      {!isDragging && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+                          {[0, 1, 2].map((i) => (
+                            <div
+                              key={i}
+                              className="group-hover/handle:bg-accent"
+                              style={{
+                                width: 3, height: 3, borderRadius: '50%',
+                                background: '#C8CDD8',
+                                transition: 'background 0.15s',
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </th>
               ))}
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -187,12 +284,18 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
               return (
                 <tr
                   key={p.id}
-                  className="border-b border-border last:border-0 hover:bg-surface transition-colors duration-100"
+                  className="bg-white border-b border-border last:border-0 hover:bg-surface transition-colors duration-100"
                 >
-                  <td className="px-4 py-3 text-sm font-semibold text-fg max-w-[220px]">
-                    <div className="overflow-hidden text-ellipsis whitespace-nowrap">{p.title}</div>
+                  <td className="px-4 py-3 text-xs text-fg-3 tabular-nums text-center whitespace-nowrap">{postNoMap.get(p.id)}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-fg">
+                    <button
+                      onClick={() => onEdit(p)}
+                      className="overflow-hidden text-ellipsis whitespace-nowrap text-left w-full border-none bg-transparent font-semibold text-fg font-[inherit] text-sm hover:text-accent transition-colors cursor-pointer"
+                    >
+                      {p.title}
+                    </button>
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
                     <span
                       className="px-2 py-[2px] rounded-sm text-[11px] font-semibold"
                       style={{ background: `${cc}18`, color: cc }}
@@ -201,17 +304,17 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-fg-3 whitespace-nowrap">{p.date}</td>
-                  <td className="px-4 py-3 text-xs text-fg-3 tabular-nums">
+                  <td className="px-4 py-3 text-xs text-fg-3 tabular-nums whitespace-nowrap">
                     {(p.views ?? 0).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-xs text-fg-3 tabular-nums">
+                  <td className="px-4 py-3 text-xs text-fg-3 tabular-nums whitespace-nowrap">
                     {(commentCounts[p.id] ?? 0).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-xs text-fg-3">{p.readTime}분</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-xs text-fg-3 whitespace-nowrap">{p.readTime}분</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <button
                       onClick={() => onTogglePublish(p.id)}
-                      className="px-2.5 py-[3px] rounded-full border-none cursor-pointer text-[11px] font-bold font-[inherit] transition-all duration-150"
+                      className="px-2.5 py-[3px] rounded-full border-none cursor-pointer text-[11px] font-bold font-[inherit] transition-all duration-150 whitespace-nowrap"
                       style={{
                         background: p.published !== false ? '#ECFDF5' : '#F3F4F6',
                         color:      p.published !== false ? '#059669' : '#888',
@@ -220,28 +323,29 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
                       {p.published !== false ? '발행중' : '임시저장'}
                     </button>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => onEdit(p)}
-                        className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-fg-2 hover:text-accent hover:border-accent transition-colors font-[inherit]"
+                        className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-fg-2 hover:text-accent hover:border-accent transition-colors font-[inherit] whitespace-nowrap"
                       >
                         <Pencil size={13} />수정
                       </button>
                       <button
                         onClick={() => { if (confirm('이 포스트를 삭제하시겠습니까?')) onDelete(p.id) }}
-                        className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit]"
+                        className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit] whitespace-nowrap"
                       >
                         <Trash2 size={13} />삭제
                       </button>
                     </div>
                   </td>
+                  <td />
                 </tr>
               )
             })}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-sm text-fg-3">
+                <td colSpan={10} className="px-4 py-10 text-center text-sm text-fg-3">
                   검색 결과가 없습니다.
                 </td>
               </tr>

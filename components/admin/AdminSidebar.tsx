@@ -28,13 +28,16 @@ export default function AdminSidebar({ view, onNavigate, onLogout, onGoSite }: A
     >
       <div className="pt-5">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 pb-5 mb-3 border-b border-border">
+        <a
+          href="/"
+          className="flex items-center gap-2.5 px-5 pb-5 mb-3 border-b border-border hover:opacity-80 transition-opacity"
+        >
           <Image src="/favicon-drivever-512.png" width={22} height={22} alt="D" className="object-contain" />
           <div>
             <div className="text-sm font-bold text-fg">Drivever</div>
             <div className="text-[10px] text-fg-3">관리자 패널</div>
           </div>
-        </div>
+        </a>
 
         {/* Nav */}
         <nav className="flex flex-col gap-0.5 px-2.5">

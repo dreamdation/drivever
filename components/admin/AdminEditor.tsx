@@ -4,13 +4,12 @@ import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { Post, ContentBlock } from '@/lib/types'
-import { getCategoryColorFromName } from '@/lib/utils'
+import { getCategoryColorFromName, toSlug } from '@/lib/utils'
 
 const TiptapEditor = dynamic(() => import('./TiptapEditor'), { ssr: false })
 
 const CATS = ['교통법규', 'Premium Garage', '안전운전', '차량관리']
 
-// Convert legacy ContentBlock[] to HTML for editing existing posts
 function blocksToHtml(blocks: ContentBlock[]): string {
   return blocks.map((b) => {
     switch (b.type) {
@@ -21,6 +20,12 @@ function blocksToHtml(blocks: ContentBlock[]): string {
       default: return `<p>${b.text}</p>`
     }
   }).join('')
+}
+
+function extractDescription(html: string): string {
+  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!text) return ''
+  return text.length > 150 ? text.slice(0, 150) + '…' : text
 }
 
 interface AdminEditorProps {
@@ -34,9 +39,15 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
   const isNew = !editPost
 
   const [title, setTitle] = useState(editPost?.title ?? '')
+  const [slug, setSlug] = useState(editPost?.slug ?? '')
+  const [slugManual, setSlugManual] = useState(!!editPost?.slug)
   const [category, setCategory] = useState(editPost?.category ?? '교통법규')
-  const [description, setDescription] = useState(editPost?.description ?? '')
   const [tags, setTags] = useState((editPost?.tags ?? []).join(', '))
+  const [date, setDate] = useState(() => {
+    if (!editPost?.date) return new Date().toISOString().slice(0, 16)
+    const raw = editPost.date.replace(/\./g, '-').replace(' ', 'T')
+    return raw.includes('T') ? raw.slice(0, 16) : `${raw}T00:00`
+  })
   const [readTime, setReadTime] = useState(editPost?.readTime ?? 5)
   const [published, setPublished] = useState(editPost?.published !== false)
   const [thumbnail, setThumbnail] = useState(editPost?.thumbnail ?? '')
@@ -45,21 +56,35 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
   const initialHtml = editPost?.bodyHtml ?? (editPost?.content?.length ? blocksToHtml(editPost.content) : '')
   const [bodyHtml, setBodyHtml] = useState(initialHtml)
 
+  const description = extractDescription(bodyHtml)
+
+  const handleTitleChange = (val: string) => {
+    setTitle(val)
+    if (!slugManual) setSlug(toSlug(val))
+  }
+
+  const handleSlugChange = (val: string) => {
+    setSlug(val)
+    setSlugManual(true)
+  }
+
   const save = () => {
     const tagArr = tags.split(',').map((t) => t.trim()).filter(Boolean)
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '.')
+    const finalDate = date.replace('T', ' ').replace(/-/g, '.')
+    const finalSlug = slug || toSlug(title)
 
     let updated: Post[]
     if (isNew) {
       const newPost: Post = {
         id: Date.now(),
+        slug: finalSlug,
         title, category,
         categoryColor: getCategoryColorFromName(category),
         description,
         tags: tagArr,
         readTime: Number(readTime),
         published,
-        date: today,
+        date: finalDate,
         content: [],
         bodyHtml,
         thumbnail: thumbnail || undefined,
@@ -68,7 +93,7 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
     } else {
       updated = posts.map((p) =>
         p.id === editPost!.id
-          ? { ...p, title, category, categoryColor: getCategoryColorFromName(category), description, tags: tagArr, readTime: Number(readTime), published, bodyHtml, thumbnail: thumbnail || undefined }
+          ? { ...p, slug: finalSlug, title, category, categoryColor: getCategoryColorFromName(category), description, tags: tagArr, readTime: Number(readTime), published, date: finalDate, bodyHtml, thumbnail: thumbnail || undefined }
           : p
       )
     }
@@ -120,19 +145,11 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
         <div className="px-9 py-8 border-r border-border">
           <textarea
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="제목을 입력하세요"
             rows={2}
             className="w-full border-none outline-none resize-none bg-transparent font-bold text-fg font-[inherit]"
             style={{ fontSize: '1.625rem', lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '12px' }}
-          />
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="요약 설명 (카드 및 메타 디스크립션에 사용됩니다)"
-            rows={2}
-            className="w-full border-none outline-none resize-none bg-transparent text-fg-2 font-[inherit] text-base"
-            style={{ lineHeight: 1.6 }}
           />
 
           <div className="h-px bg-border my-6" />
@@ -141,7 +158,7 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
         </div>
 
         {/* Meta sidebar */}
-        <div className="px-5 py-6 bg-surface">
+        <div className="px-5 py-6 bg-surface overflow-y-auto" style={{ height: 'calc(100vh - 105px)' }}>
           <MetaField label="카테고리">
             <select
               value={category}
@@ -167,6 +184,15 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
             )}
           </MetaField>
 
+          <MetaField label="작성일시">
+            <input
+              type="datetime-local"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none font-[inherit]"
+            />
+          </MetaField>
+
           <MetaField label="읽는 시간 (분)">
             <input
               type="number" value={readTime} onChange={(e) => setReadTime(Number(e.target.value))}
@@ -181,6 +207,17 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
               placeholder="교통법규, 음주운전, 벌점"
               className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none font-[inherit]"
             />
+          </MetaField>
+
+          <MetaField label="URL 슬러그">
+            <input
+              value={slug}
+              onChange={(e) => handleSlugChange(e.target.value)}
+              placeholder="url-slug-here"
+              className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none font-[inherit]"
+              style={{ fontFamily: 'monospace' }}
+            />
+            <div className="text-[10px] text-fg-3 mt-1 truncate">drivever.com/blog/{slug || '...'}</div>
           </MetaField>
 
           {/* Preview card */}

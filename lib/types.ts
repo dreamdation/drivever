@@ -9,6 +9,7 @@ export type ContentBlock =
 
 export interface Post {
   id: number
+  slug: string
   category: string
   categoryColor: CategoryColor
   published: boolean

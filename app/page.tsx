@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { INITIAL_POSTS, INITIAL_HERO } from '@/lib/data'
+import { supabase, rowToPost, PostRow } from '@/lib/supabase'
 import HomeClient from '@/components/blog/HomeClient'
 
 export const metadata: Metadata = {
@@ -55,18 +56,18 @@ function BlogJsonLd() {
   )
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { data } = await supabase.from('posts').select('*').eq('published', true)
+  const staticIds = new Set(INITIAL_POSTS.map((p) => p.id))
+  const supaPosts = (data ?? [])
+    .map((r) => rowToPost(r as PostRow))
+    .filter((p) => !staticIds.has(p.id))
+  const allPosts = [...INITIAL_POSTS, ...supaPosts].sort((a, b) => b.date.localeCompare(a.date))
+
   return (
     <>
       <BlogJsonLd />
-      {/*
-        HomeClient hydrates from Zustand store (which merges localStorage posts).
-        SSR falls back to INITIAL_POSTS / INITIAL_HERO for SEO crawlability.
-      */}
-      <HomeClient
-        initialPosts={INITIAL_POSTS}
-        initialHero={INITIAL_HERO}
-      />
+      <HomeClient initialPosts={allPosts} initialHero={INITIAL_HERO} />
     </>
   )
 }

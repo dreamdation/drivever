@@ -39,6 +39,22 @@ export const useBlogStore = create<BlogStore>()(
     }),
     {
       name: 'drivever-blog-store',
+      version: 1,
+      skipHydration: true,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 1) {
+          const posts: any[] = persistedState.posts ?? []
+          return {
+            ...persistedState,
+            posts: posts.map((p) => {
+              if (p.slug) return p
+              const initial = INITIAL_POSTS.find((ip) => ip.id === p.id)
+              return { ...p, slug: initial?.slug ?? String(p.id) }
+            }),
+          }
+        }
+        return persistedState
+      },
       onRehydrateStorage: () => (state) => {
         state?.setHydrated()
       },

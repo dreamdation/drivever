@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBlogStore } from '@/store/blogStore'
 import AdminSidebar, { AdminView } from './AdminSidebar'
@@ -10,7 +10,7 @@ import AdminHeroManager from './AdminHeroManager'
 import AdminCommentsManager from './AdminCommentsManager'
 import LoginClient from './LoginClient'
 import { Post } from '@/lib/types'
-import { supabase, postToRow } from '@/lib/supabase'
+import { supabase, postToRow, rowToPost, PostRow } from '@/lib/supabase'
 
 interface AdminClientProps {
   initialView: AdminView
@@ -23,6 +23,7 @@ export default function AdminClient({ initialView }: AdminClientProps) {
   const [view, setView] = useState<AdminView>(initialView)
   const [editPost, setEditPost] = useState<Post | null>(null)
   const [commentCounts, setCommentCounts] = useState<Record<number, number>>({})
+  const supaLoadedRef = useRef(false)
 
   // Fetch comment counts from Supabase for dashboard display
   useEffect(() => {
@@ -35,6 +36,23 @@ export default function AdminClient({ initialView }: AdminClientProps) {
       setCommentCounts(counts)
     })
   }, [])
+
+  // Sync Supabase posts into store (once after hydration)
+  // Covers posts imported externally (e.g. WordPress XML) that aren't in localStorage
+  useEffect(() => {
+    if (!_hydrated || supaLoadedRef.current) return
+    supaLoadedRef.current = true
+    supabase.from('posts').select('*').then(({ data }) => {
+      if (!data?.length) return
+      const storeIds = new Set(posts.map((p) => p.id))
+      const incoming = data
+        .filter((r) => !storeIds.has((r as PostRow).id))
+        .map((r) => rowToPost(r as PostRow))
+      if (incoming.length === 0) return
+      const merged = [...posts, ...incoming].sort((a, b) => b.date.localeCompare(a.date))
+      setPosts(merged)
+    })
+  }, [_hydrated]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync URL to view
   const handleNavigate = (v: AdminView) => {
@@ -76,7 +94,7 @@ export default function AdminClient({ initialView }: AdminClientProps) {
         onGoSite={() => router.push('/')}
       />
 
-      <div className="flex-1 overflow-auto bg-white">
+      <div className="flex-1 bg-white" style={{ height: '100vh', overflowY: 'auto' }}>
         {view === 'dashboard' && (
           <AdminDashboard
             posts={posts}

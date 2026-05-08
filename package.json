@@ -11,9 +11,11 @@
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
     "@supabase/supabase-js": "^2.105.1",
+    "@tiptap/extension-color": "^3.22.5",
     "@tiptap/extension-image": "^3.22.4",
     "@tiptap/extension-link": "^3.22.4",
     "@tiptap/extension-placeholder": "^3.22.4",
+    "@tiptap/extension-text-style": "^3.22.5",
     "@tiptap/react": "^3.22.4",
     "@tiptap/starter-kit": "^3.22.4",
     "browser-image-compression": "^2.0.2",

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { ChevronLeft } from 'lucide-react'
 import { useBlogStore } from '@/store/blogStore'
 import LawBox from './LawBox'
@@ -23,7 +22,12 @@ interface ArticleClientProps {
 
 export default function ArticleClient({ postId, staticPost, allStaticPosts }: ArticleClientProps) {
   const { posts: storePosts, _hydrated, incrementViews } = useBlogStore()
-  const allPosts = _hydrated ? storePosts : allStaticPosts
+  const allPosts = _hydrated
+    ? (() => {
+        const storeIds = new Set(storePosts.map((p) => p.id))
+        return [...storePosts, ...allStaticPosts.filter((p) => !storeIds.has(p.id))]
+      })()
+    : allStaticPosts
   const post = allPosts.find((p) => p.id === postId) ?? staticPost
 
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -102,19 +106,6 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
           <span className="text-sm font-medium text-accent">{post.category}</span>
         </div>
 
-        {/* Hero image */}
-        {post.thumbnail && (
-          <div className="rounded-[10px] overflow-hidden mb-7 bg-[#F0F2F5]" style={{ aspectRatio: '21/9' }}>
-            <Image
-              src={post.thumbnail}
-              alt={post.title}
-              width={1080} height={460}
-              className="w-full h-full object-cover"
-              priority
-            />
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-0">
           {/* ── Main article ── */}
           <main className="lg:pr-14">
@@ -146,14 +137,6 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
             )}
 
             <div className="h-px bg-border my-6" />
-
-            {/* Lead */}
-            <p
-              className="text-base font-medium text-[#333] leading-[1.75] mb-0"
-              style={{ letterSpacing: '-0.01em' }}
-            >
-              {post.description}
-            </p>
 
             {/* Top ad */}
             <AdSlot size="leaderboard" label="광고 영역 — 본문 상단" />
@@ -214,7 +197,7 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
                 {related.map((p) => (
                   <Link
                     key={p.id}
-                    href={`/blog/${p.id}`}
+                    href={`/blog/${p.slug}`}
                     className="block bg-white border border-border rounded-[6px] px-3 py-2.5 hover:border-accent transition-colors"
                   >
                     <div className="text-sm font-semibold text-fg leading-snug mb-0.5">{p.title}</div>

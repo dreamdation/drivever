@@ -13,14 +13,14 @@ interface PostCardProps {
 
 export default function PostCard({ post, compact = false }: PostCardProps) {
   const [imgError, setImgError] = useState(false)
-  const { id, category, categoryColor, title, description, date, readTime, isNew, published, thumbnail } = post
+  const { slug, category, categoryColor, title, description, date, readTime, isNew, published, thumbnail } = post
   const catStyle = getCategoryStyle(categoryColor)
   const showThumb = !!thumbnail && !imgError
 
   if (compact) {
     return (
       <Link
-        href={`/blog/${id}`}
+        href={`/blog/${slug}`}
         className="flex items-center justify-between px-4 py-3.5 bg-white border border-border rounded-[8px] hover:border-accent transition-colors duration-150 group"
       >
         <div className="flex-1 text-left">
@@ -49,7 +49,7 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
 
   return (
     <Link
-      href={`/blog/${id}`}
+      href={`/blog/${slug}`}
       className="flex flex-col bg-white border border-border rounded-[8px] overflow-hidden hover:border-accent hover:shadow-card-hover transition-all duration-150 group"
     >
       {/* 16:9 Thumbnail */}

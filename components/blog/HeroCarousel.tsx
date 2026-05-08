@@ -46,7 +46,7 @@ export default function HeroCarousel({ slides, posts }: HeroCarouselProps) {
 
   const handleReadMore = () => {
     const post = posts.find((p) => p.id === slide.postId)
-    if (post) router.push(`/blog/${post.id}`)
+    if (post) router.push(`/blog/${post.slug}`)
   }
 
   return (

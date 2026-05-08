@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Header from './Header'
 import SearchOverlay from './SearchOverlay'
@@ -8,6 +8,10 @@ import { useBlogStore } from '@/store/blogStore'
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
+
+  useEffect(() => {
+    useBlogStore.persist.rehydrate()
+  }, [])
   const pathname = usePathname()
   const { posts, _hydrated } = useBlogStore()
 

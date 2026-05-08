@@ -10,6 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export type PostRow = {
   id:             number
+  slug:           string
   category:       string
   category_color: string
   published:      boolean
@@ -41,6 +42,7 @@ export type CommentRow = {
 export function postToRow(p: Post): Omit<PostRow, 'created_at' | 'updated_at'> {
   return {
     id:             p.id,
+    slug:           p.slug,
     category:       p.category,
     category_color: p.categoryColor,
     published:      p.published ?? false,
@@ -60,6 +62,7 @@ export function postToRow(p: Post): Omit<PostRow, 'created_at' | 'updated_at'> {
 export function rowToPost(r: PostRow): Post {
   return {
     id:            r.id,
+    slug:          r.slug,
     category:      r.category,
     categoryColor: r.category_color as Post['categoryColor'],
     published:     r.published,

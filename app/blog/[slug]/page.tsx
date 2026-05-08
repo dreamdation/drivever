@@ -2,25 +2,28 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { INITIAL_POSTS } from '@/lib/data'
 import { supabase, rowToPost, PostRow } from '@/lib/supabase'
+import { Post } from '@/lib/types'
 import ArticleClient from '@/components/article/ArticleClient'
 
 export const dynamicParams = true
 
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }
 
 export async function generateStaticParams() {
-  return INITIAL_POSTS.map((p) => ({ id: String(p.id) }))
+  return INITIAL_POSTS.map((p) => ({ slug: p.slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params
-  const numId = Number(id)
-  const staticPost = INITIAL_POSTS.find((p) => p.id === numId)
+  const { slug: rawSlug } = await params
+  const slug = (() => {
+    try { return decodeURIComponent(rawSlug) } catch { return rawSlug }
+  })()
+  const staticPost = INITIAL_POSTS.find((p) => p.slug === slug)
 
   const post = staticPost ?? await (async () => {
-    const { data } = await supabase.from('posts').select('*').eq('id', numId).single()
+    const { data } = await supabase.from('posts').select('*').eq('slug', slug).single()
     return data ? rowToPost(data as PostRow) : null
   })()
 
@@ -30,12 +33,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.description,
     keywords: post.tags,
-    alternates: { canonical: `https://drivever.com/blog/${post.id}` },
+    alternates: { canonical: `https://drivever.com/blog/${post.slug}` },
     openGraph: {
       type: 'article',
       title: post.title,
       description: post.description,
-      url: `https://drivever.com/blog/${post.id}`,
+      url: `https://drivever.com/blog/${post.slug}`,
       ...(post.thumbnail && { images: [{ url: post.thumbnail }] }),
       publishedTime: post.date.replace(/\./g, '-'),
       authors: ['Drivever 운영자'],
@@ -49,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-function ArticleJsonLd({ post }: { post: (typeof INITIAL_POSTS)[0] }) {
+function ArticleJsonLd({ post }: { post: Post }) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -63,7 +66,7 @@ function ArticleJsonLd({ post }: { post: (typeof INITIAL_POSTS)[0] }) {
       name: 'Drivever',
       logo: { '@type': 'ImageObject', url: 'https://drivever.com/favicon-drivever-512.png' },
     },
-    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://drivever.com/blog/${post.id}` },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://drivever.com/blog/${post.slug}` },
     keywords: post.tags.join(', '),
     articleSection: post.category,
     ...(post.thumbnail && { image: post.thumbnail }),
@@ -77,30 +80,40 @@ function ArticleJsonLd({ post }: { post: (typeof INITIAL_POSTS)[0] }) {
 }
 
 export default async function ArticlePage({ params }: Props) {
-  const { id } = await params
-  const numId = Number(id)
+  const { slug: rawSlug } = await params
+  // Next.js may pass params already decoded or still encoded — normalise to be safe
+  const slug = (() => {
+    try { return decodeURIComponent(rawSlug) } catch { return rawSlug }
+  })()
 
-  const staticPost = INITIAL_POSTS.find((p) => p.id === numId)
+  const staticPost = INITIAL_POSTS.find((p) => p.slug === slug)
 
   if (staticPost) {
     return (
       <>
         <ArticleJsonLd post={staticPost} />
-        <ArticleClient postId={numId} staticPost={staticPost} allStaticPosts={INITIAL_POSTS} />
+        <ArticleClient postId={staticPost.id} staticPost={staticPost} allStaticPosts={INITIAL_POSTS} />
       </>
     )
   }
 
-  // Supabase fallback for admin-created posts
-  const { data } = await supabase.from('posts').select('*').eq('id', numId).single()
-  if (!data) notFound()
+  // Supabase fallback for admin-created posts — try slug first, then numeric ID
+  let supaPost: PostRow | null = null
+  const { data: bySlug } = await supabase.from('posts').select('*').eq('slug', slug).single()
+  if (bySlug) {
+    supaPost = bySlug as PostRow
+  } else if (/^\d+$/.test(slug)) {
+    const { data: byId } = await supabase.from('posts').select('*').eq('id', Number(slug)).single()
+    if (byId) supaPost = byId as PostRow
+  }
 
-  const post = rowToPost(data as PostRow)
+  if (!supaPost) notFound()
+  const post = rowToPost(supaPost)
 
   return (
     <>
       <ArticleJsonLd post={post} />
-      <ArticleClient postId={numId} staticPost={post} allStaticPosts={INITIAL_POSTS} />
+      <ArticleClient postId={post.id} staticPost={post} allStaticPosts={INITIAL_POSTS} />
     </>
   )
 }

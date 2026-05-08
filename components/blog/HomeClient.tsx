@@ -19,7 +19,13 @@ interface HomeClientProps {
 export default function HomeClient({ initialPosts, initialHero }: HomeClientProps) {
   const { posts: storePosts, heroSlides: storeHero, _hydrated } = useBlogStore()
 
-  const posts = _hydrated ? storePosts : initialPosts
+  const posts = _hydrated
+    ? (() => {
+        const storeIds = new Set(storePosts.map((p) => p.id))
+        const merged = [...storePosts, ...initialPosts.filter((p) => !storeIds.has(p.id))]
+        return merged.sort((a, b) => b.date.localeCompare(a.date))
+      })()
+    : initialPosts
   const heroSlides = _hydrated ? storeHero : initialHero
 
   const [cat, setCat] = useState('전체')
