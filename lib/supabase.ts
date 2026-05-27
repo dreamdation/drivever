@@ -40,6 +40,19 @@ export type CommentRow = {
   is_admin:      boolean
 }
 
+export type InquiryStatus = 'new' | 'read' | 'replied' | 'archived'
+
+export type AdInquiryRow = {
+  id:         number
+  company:    string | null
+  name:       string
+  email:      string
+  phone:      string | null
+  message:    string
+  status:     InquiryStatus
+  created_at: string
+}
+
 // ── Converters ──────────────────────────────────────────────────
 
 export function postToRow(p: Post): Omit<PostRow, 'created_at' | 'updated_at'> {

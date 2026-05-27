@@ -9,6 +9,7 @@ import AdminDashboard from './AdminDashboard'
 import AdminEditor from './AdminEditor'
 import AdminHeroManager from './AdminHeroManager'
 import AdminCommentsManager from './AdminCommentsManager'
+import AdminInquiriesManager from './AdminInquiriesManager'
 import AdminTrashManager from './AdminTrashManager'
 import LoginClient from './LoginClient'
 import { Post } from '@/lib/types'
@@ -29,6 +30,7 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
   const [editPost, setEditPost] = useState<Post | null>(null)
   const [editPostReady, setEditPostReady] = useState(!editPostId)
   const [commentCounts, setCommentCounts] = useState<Record<number, number>>({})
+  const [newInquiryCount, setNewInquiryCount] = useState(0)
   const supaLoadedRef = useRef(false)
   const editPostSetRef = useRef(false)
 
@@ -37,6 +39,15 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
   useEffect(() => {
     fetchHeroSlides().then((slides) => { if (slides) setHeroSlides(slides) })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Unread ('new') ad-inquiry count for the sidebar badge.
+  useEffect(() => {
+    supabase
+      .from('ad_inquiries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'new')
+      .then(({ count }) => setNewInquiryCount(count ?? 0))
+  }, [view])
 
   // Fetch comment counts from Supabase for dashboard display
   useEffect(() => {
@@ -138,6 +149,7 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
     else if (v === 'editor')   { setEditPost(null); router.replace('/admin/editor') }
     else if (v === 'hero')      router.replace('/admin/hero')
     else if (v === 'comments')  router.replace('/admin/comments')
+    else if (v === 'inquiries') router.replace('/admin/inquiries')
     else if (v === 'trash')     router.replace('/admin/trash')
   }
 
@@ -233,6 +245,7 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
         }}
         onGoSite={() => router.push('/')}
         trashCount={trashedPosts.length}
+        newInquiryCount={newInquiryCount}
       />
 
       <div className="flex-1 bg-white" style={{ height: '100vh', overflowY: 'auto' }}>
@@ -287,6 +300,9 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
         )}
         {view === 'comments' && (
           <AdminCommentsManager posts={posts} />
+        )}
+        {view === 'inquiries' && (
+          <AdminInquiriesManager />
         )}
         {view === 'trash' && (
           <AdminTrashManager

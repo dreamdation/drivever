@@ -18,7 +18,12 @@
       "Bash(node scripts/migrations/2026-05-20_ingest_wp_images.mjs --execute)",
       "Bash(node scripts/migrations/2026-05-20_storage_folder_restructure.mjs --execute)",
       "Bash(curl -s \"http://localhost:3000/blog/cold-medicine-drug-driving-test-results-%EC%95%BD%EB%AC%BC%EC%9A%B4%EC%A0%84\")",
-      "Bash(node scripts/migrations/2026-05-20_rewrite_wp_navlinks.mjs --execute)"
+      "Bash(node scripts/migrations/2026-05-20_rewrite_wp_navlinks.mjs --execute)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(cat app/admin/comments/page.tsx)",
+      "Bash(cat app/admin/page.tsx)",
+      "Bash(npx next *)"
     ]
   }
 }

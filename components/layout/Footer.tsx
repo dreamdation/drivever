@@ -15,12 +15,13 @@ const COLS = [
     items: [
       { href: '/about', label: '블로그 소개' },
       { href: '/', label: '최신 글' },
-      { href: '/about', label: '광고 문의' },
+      { href: '/advertise', label: '광고 문의' },
     ],
   },
 ]
 
 export default function Footer() {
+  const year = new Date().getFullYear()
   return (
     <footer className="border-t border-border mt-16 bg-surface">
       <div className="max-w-[1080px] mx-auto px-6 py-12 flex flex-col md:flex-row gap-7 md:gap-12 justify-between">
@@ -69,6 +70,18 @@ export default function Footer() {
               ))}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Copyright bar */}
+      <div className="border-t border-border">
+        <div className="max-w-[1080px] mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-1.5">
+          <p className="text-xs text-[#aaa]">
+            © {year} Drivever. All rights reserved.
+          </p>
+          <p className="text-[11px] text-[#bbb]">
+            Drivever™ 및 관련 콘텐츠의 저작권은 Drivever에 있습니다.
+          </p>
         </div>
       </div>
     </footer>

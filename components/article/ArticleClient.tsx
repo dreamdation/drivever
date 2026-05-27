@@ -8,6 +8,7 @@ import LawBox from './LawBox'
 import TipBox from './TipBox'
 import TableOfContents from './TableOfContents'
 import CommentsSection from './CommentsSection'
+import ShareBar from './ShareBar'
 import AdSlot from '@/components/blog/AdSlot'
 import PostCard from '@/components/blog/PostCard'
 import Footer from '@/components/layout/Footer'
@@ -181,6 +182,10 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
                 </div>
               </>
             )}
+
+            {/* Share (bottom) */}
+            <div className="h-px bg-border my-6" />
+            <ShareBar title={post.title} description={post.description} imageUrl={post.thumbnail} />
 
             {/* Bottom ad */}
             <AdSlot size="leaderboard" label="광고 영역 — 본문 하단" />

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { HeroSlide, Post } from '@/lib/types'
+import { getCategoryStyle } from '@/lib/utils'
 
 interface HeroCarouselProps {
   slides: HeroSlide[]
@@ -38,6 +39,12 @@ export default function HeroCarousel({ slides, posts }: HeroCarouselProps) {
 
   if (!slides.length) return null
   const slide = slides[current]
+
+  // Category text + color follow the connected post (falls back to the stored
+  // text + accent blue when the post is missing).
+  const slidePost = posts.find((p) => p.id === slide.postId)
+  const catText = slidePost?.category ?? slide.category
+  const catColor = getCategoryStyle(slidePost?.categoryColor ?? 'blue').text
 
   // Manual background URL wins; otherwise fall back to the connected post's
   // thumbnail. Only when neither exists do we use the gradient.
@@ -89,15 +96,17 @@ export default function HeroCarousel({ slides, posts }: HeroCarouselProps) {
             <span style={{ color: 'rgba(255,255,255,0.35)' }}>{String(slides.length).padStart(2, '0')}</span>
           </div>
 
-          {/* Category chip */}
-          <div className="mb-3">
-            <span
-              className="inline-block px-2.5 py-[3px] text-white text-[11px] font-bold rounded-sm"
-              style={{ background: 'rgba(0,112,243,0.9)', letterSpacing: '0.06em', backdropFilter: 'blur(4px)' }}
-            >
-              {slide.category}
-            </span>
-          </div>
+          {/* Category chip — color matches the connected post's category */}
+          {catText && (
+            <div className="mb-3">
+              <span
+                className="inline-block px-2.5 py-[3px] text-white text-[11px] font-bold rounded-sm"
+                style={{ background: catColor, letterSpacing: '0.06em', backdropFilter: 'blur(4px)' }}
+              >
+                {catText}
+              </span>
+            </div>
+          )}
 
           {/* Title */}
           <h2

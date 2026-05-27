@@ -174,20 +174,14 @@ export default function Header({ onSearchOpen }: HeaderProps) {
             </Link>
           )}
 
-          {isLoggedIn ? (
+          {/* Admin is reached by visiting /admin directly (no public login button). */}
+          {isLoggedIn && (
             <button
               onClick={() => router.push('/admin')}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-[6px] bg-accent text-white hover:bg-accent-hover transition-colors duration-150"
             >
               <User size={13} />
               관리자
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push('/login')}
-              className="px-3.5 py-1.5 text-sm font-semibold rounded-[6px] border border-border bg-white text-fg-2 hover:bg-surface transition-colors duration-150"
-            >
-              로그인
             </button>
           )}
 
