@@ -32,7 +32,7 @@ function SlidePreview({ slide }: { slide: Partial<HeroSlide> }) {
         >
           {slide.category}
         </span>
-        <div className="text-[13px] font-bold text-white leading-tight mb-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
+        <div className="text-[13px] font-bold text-white leading-tight mb-0.5" style={{ whiteSpace: 'pre-line', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {slide.title}
         </div>
         <div className="text-[10px] overflow-hidden text-ellipsis whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -59,6 +59,11 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
 
   const published = posts.filter((p) => p.published !== false)
 
+  // Connected post's thumbnail, used as the slide background when no manual URL.
+  const thumbOf = (postId?: number) => (postId ? posts.find((p) => p.id === postId)?.thumbnail : undefined)
+  const resolveImage = (s: { image?: string; postId?: number }) =>
+    (s.image && s.image.trim()) ? s.image : thumbOf(s.postId)
+
   const openNew = () => {
     setForm({ postId: '', category: '', title: '', description: '', bg: GRADIENT_PRESETS[0].value, image: '' })
     setEditingId(null)
@@ -78,13 +83,14 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
   const autoFill = (postId: string) => {
     const post = published.find((p) => p.id === Number(postId))
     if (post) {
+      // Don't copy the thumbnail into `image` — leaving it empty lets the slide
+      // fall back to the post's (possibly changing) thumbnail at render time.
       setForm((f) => ({
         ...f,
         postId,
         category:    post.category,
         title:       post.title,
         description: post.description,
-        image:       post.thumbnail ?? f.image,   // thumbnail as default; manual URL overrides
       }))
     } else {
       setForm((f) => ({ ...f, postId }))
@@ -141,7 +147,7 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
           <div key={slide.id} className="border border-border rounded-[10px] overflow-hidden bg-white">
             <div className="grid" style={{ gridTemplateColumns: '280px 1fr' }}>
               <div className="p-4 pr-0">
-                <SlidePreview slide={slide} />
+                <SlidePreview slide={{ ...slide, image: resolveImage(slide) }} />
               </div>
               <div className="p-4 pl-5 flex flex-col justify-between">
                 <div>
@@ -153,7 +159,7 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
                       {slide.category}
                     </span>
                   </div>
-                  <div className="text-base font-bold text-fg leading-snug mb-1.5">{slide.title}</div>
+                  <div className="text-base font-bold text-fg leading-snug mb-1.5" style={{ whiteSpace: 'pre-line' }}>{slide.title}</div>
                   <div className="text-sm text-fg-2 leading-relaxed">{slide.description}</div>
                   {slide.postId && (
                     <div className="mt-2 text-[11px] text-[#aaa]">
@@ -216,14 +222,21 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
             <MField label="카테고리 텍스트">
               <input value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} placeholder="교통법규" className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none" />
             </MField>
-            <MField label="타이틀">
-              <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="배너 제목" className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none" />
+            <MField label="타이틀 (엔터로 줄바꿈)">
+              <textarea value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} rows={2} placeholder={"배너 제목\n줄바꿈 원하는 위치에서 엔터"} className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none resize-none font-[inherit]" style={{ whiteSpace: 'pre-line' }} />
             </MField>
             <MField label="디스크립션">
               <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} placeholder="배너 설명" className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none resize-y" />
             </MField>
             <MField label="배경 이미지 URL">
-              <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="포스트 선택 시 썸네일 자동 입력 — 직접 URL 입력 시 우선 적용" className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none" />
+              <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="비워두면 연결된 포스트의 썸네일이 자동 사용됩니다" className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none" />
+              <div className="text-[10px] text-fg-3 mt-1 leading-relaxed">
+                {(form.image && form.image.trim())
+                  ? '입력한 URL 이미지가 사용됩니다.'
+                  : thumbOf(form.postId ? Number(form.postId) : undefined)
+                    ? '연결된 포스트의 썸네일이 자동으로 사용됩니다.'
+                    : '비워두면 연결된 포스트의 썸네일 또는 아래 그라디언트가 사용됩니다.'}
+              </div>
             </MField>
             <MField label="배경 그라디언트">
               <div className="grid grid-cols-3 gap-2 mt-2">
@@ -242,7 +255,11 @@ export default function AdminHeroManager({ posts, heroSlides, onSave }: AdminHer
               </div>
             </MField>
             <MField label="미리보기">
-              <SlidePreview slide={{ ...form, postId: form.postId ? Number(form.postId) : undefined }} />
+              <SlidePreview slide={{
+                ...form,
+                postId: form.postId ? Number(form.postId) : undefined,
+                image: resolveImage({ image: form.image, postId: form.postId ? Number(form.postId) : undefined }),
+              }} />
             </MField>
 
             <div className="flex gap-2.5 justify-end mt-2">

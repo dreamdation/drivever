@@ -22,7 +22,7 @@ const COLS = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-border mt-16 bg-white">
+    <footer className="border-t border-border mt-16 bg-surface">
       <div className="max-w-[1080px] mx-auto px-6 py-12 flex flex-col md:flex-row gap-7 md:gap-12 justify-between">
         {/* Brand */}
         <div className="max-w-xs">
@@ -41,7 +41,7 @@ export default function Footer() {
             </span>
           </div>
           <p className="text-sm text-[#888] leading-relaxed mb-3">
-            실제 오너의 경험 + 정확한 법률 해석 — 믿을 수 있는 자동차 정보
+            실제 오너의 경험으로 정확한 운전과 자동차 정보를 전달하는 블로그
           </p>
           <p className="text-xs text-[#ccc]">
             © 2025 Drivever. 본 블로그의 정보는 참고용이며 법적 효력이 없습니다.

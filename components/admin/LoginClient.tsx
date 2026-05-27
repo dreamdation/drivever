@@ -2,29 +2,35 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
-import { useBlogStore } from '@/store/blogStore'
+import { supabase } from '@/lib/supabase'
 
 export default function LoginClient() {
-  const [id, setId] = useState('')
+  const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { login } = useBlogStore()
 
-  const handle = (e: React.FormEvent) => {
+  const handle = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErr('')
     setLoading(true)
-    setTimeout(() => {
-      if (id === 'admin' && pw === 'drivever2024') {
-        login()
-        router.push('/admin')
-      } else {
-        setErr('아이디 또는 비밀번호가 올바르지 않습니다.')
-        setLoading(false)
-      }
-    }, 600)
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: pw,
+    })
+
+    if (error) {
+      setErr('이메일 또는 비밀번호가 올바르지 않습니다.')
+      setLoading(false)
+      return
+    }
+
+    router.push('/admin')
+    router.refresh()
   }
 
   return (
@@ -33,11 +39,10 @@ export default function LoginClient() {
         className="bg-white border border-border rounded-xl p-10 w-[400px]"
         style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-6">
+        <Link href="/" className="flex items-center justify-center gap-2 mb-6 group">
           <Image src="/favicon-drivever-512.png" width={36} height={36} alt="Drivever" className="object-contain" />
-          <span className="text-md font-bold text-fg" style={{ letterSpacing: '-0.02em' }}>Drivever</span>
-        </div>
+          <span className="text-md font-bold text-fg group-hover:text-accent transition-colors" style={{ letterSpacing: '-0.02em' }}>Drivever</span>
+        </Link>
 
         <h1 className="text-[1.375rem] font-bold text-fg text-center mb-1.5">관리자 로그인</h1>
         <p className="text-sm text-fg-3 text-center mb-6 leading-relaxed">
@@ -46,12 +51,14 @@ export default function LoginClient() {
 
         <form onSubmit={handle} className="flex flex-col gap-3.5">
           <div>
-            <label className="block text-xs font-semibold text-fg-2 mb-1.5">아이디</label>
+            <label className="block text-xs font-semibold text-fg-2 mb-1.5">이메일</label>
             <input
-              value={id}
-              onChange={(e) => { setId(e.target.value); setErr('') }}
-              placeholder="admin"
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setErr('') }}
+              placeholder="admin@example.com"
               autoFocus
+              autoComplete="email"
               className="w-full px-3 py-2.5 border border-border rounded-[6px] text-[0.9375rem] outline-none transition-colors focus:border-accent"
             />
           </div>
@@ -62,6 +69,7 @@ export default function LoginClient() {
               value={pw}
               onChange={(e) => { setPw(e.target.value); setErr('') }}
               placeholder="••••••••••"
+              autoComplete="current-password"
               className="w-full px-3 py-2.5 border border-border rounded-[6px] text-[0.9375rem] outline-none transition-colors focus:border-accent"
             />
           </div>
@@ -84,18 +92,6 @@ export default function LoginClient() {
           </button>
         </form>
 
-        <div className="mt-3.5 text-center">
-          <button
-            onClick={() => router.push('/')}
-            className="text-sm text-fg-3 bg-transparent border-none cursor-pointer font-[inherit] hover:text-accent transition-colors"
-          >
-            ← 블로그로 돌아가기
-          </button>
-        </div>
-
-        <div className="mt-5 px-3 py-3 bg-surface rounded-[6px] text-[11px] text-[#aaa] text-center">
-          <span className="font-semibold">테스트 계정</span> — ID: admin / PW: drivever2024
-        </div>
       </div>
     </div>
   )

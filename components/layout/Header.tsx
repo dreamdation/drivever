@@ -4,8 +4,9 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Search, User, Menu, X } from 'lucide-react'
+import { Search, User, Menu, X, Pencil } from 'lucide-react'
 import { useBlogStore } from '@/store/blogStore'
+import { useAuth } from '@/lib/useAuth'
 import { cn } from '@/lib/utils'
 
 type NavLink = {
@@ -104,8 +105,20 @@ interface HeaderProps {
 
 export default function Header({ onSearchOpen }: HeaderProps) {
   const router = useRouter()
-  const { isLoggedIn } = useBlogStore()
+  const pathname = usePathname()
+  const { posts, _hydrated, activePost } = useBlogStore()
+  const { isLoggedIn } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // The post to edit on a blog post page. `activePost` (published by ArticleClient
+  // from SSR) is authoritative and covers DB-only posts; the slug lookup is a
+  // fallback so seed posts show the button instantly before that effect runs.
+  const postSlugMatch = pathname.match(/^\/blog\/(.+)$/)
+  const currentPostSlug = postSlugMatch
+    ? (() => { try { return decodeURIComponent(postSlugMatch[1]) } catch { return postSlugMatch[1] } })()
+    : null
+  const fallbackPost = _hydrated && currentPostSlug ? posts.find((p) => p.slug === currentPostSlug) : null
+  const editTarget = activePost ?? (fallbackPost ? { id: fallbackPost.id, slug: fallbackPost.slug } : null)
 
   return (
     <header
@@ -150,6 +163,16 @@ export default function Header({ onSearchOpen }: HeaderProps) {
           >
             <Search size={15} />
           </button>
+
+          {isLoggedIn && editTarget && (
+            <Link
+              href={`/admin/editor?id=${editTarget.id}&from=/blog/${editTarget.slug}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-[6px] border border-accent text-accent hover:bg-accent-light transition-colors duration-150"
+            >
+              <Pencil size={13} />
+              수정
+            </Link>
+          )}
 
           {isLoggedIn ? (
             <button

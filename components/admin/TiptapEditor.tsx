@@ -9,9 +9,11 @@ import ImageExt from '@tiptap/extension-image'
 import ColorExt from '@tiptap/extension-color'
 import { TextStyle as TextStyleExt } from '@tiptap/extension-text-style'
 import { Node, mergeAttributes } from '@tiptap/core'
+import Heading from '@tiptap/extension-heading'
+import { toHeadingId } from '@/lib/utils'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
-import { Bold, Italic, Strikethrough, Heading2, Heading3, List, ListOrdered, Link, Scale, Lightbulb, Unlink, ImageIcon, Loader2, Minus, Video } from 'lucide-react'
+import { Bold, Italic, Strikethrough, Heading2, Heading3, List, ListOrdered, Link, Scale, Lightbulb, Unlink, ImageIcon, Loader2, Minus, Video, ListChecks } from 'lucide-react'
 
 // ── Video URL parser ─────────────────────────────────────────────
 
@@ -99,6 +101,126 @@ const TipBoxNode = Node.create({
   },
 })
 
+// ── Custom node: SummaryList ────────────────────────────────────
+
+interface SummaryItem { level: 2 | 3; text: string; id: string }
+
+function SummaryListView({ node, updateAttributes }: NodeViewProps) {
+  const title = (node.attrs.title as string) ?? '핵심 목록'
+  const items = (node.attrs.items as SummaryItem[]) ?? []
+
+  const scrollToHeading = (id: string) => {
+    const el =
+      Array.from(document.querySelectorAll('.ProseMirror h2, .ProseMirror h3'))
+        .find((h) => toHeadingId(h.textContent ?? '') === id)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  let h2Count = 0
+  let h3Count = 0
+  const labeled = items.map((item) => {
+    if (item.level === 2) { h2Count++; h3Count = 0; return { ...item, label: `${h2Count}.` } }
+    h3Count++
+    return { ...item, label: `${h2Count}.${h3Count}` }
+  })
+
+  return (
+    <NodeViewWrapper contentEditable={false}>
+      <div style={{ background: '#F0F7FF', border: '1.5px solid #B3D4FC', borderRadius: '8px', padding: '16px 20px', margin: '20px 0', userSelect: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+          <ListChecks size={14} color="#0070F3" style={{ flexShrink: 0 }} />
+          <input
+            value={title}
+            onChange={(e) => updateAttributes({ title: e.target.value })}
+            placeholder="요약 제목"
+            style={{ border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 700, color: '#0070F3', outline: 'none', fontFamily: 'inherit', flex: 1 }}
+          />
+        </div>
+        {labeled.length > 0 ? (
+          <div style={{ padding: 0, margin: 0 }}>
+            {labeled.map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '5px', paddingLeft: item.level === 3 ? '1.25rem' : '0' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: item.level === 2 ? '#0070F3' : '#4a7fc1', minWidth: item.level === 3 ? '32px' : '22px', flexShrink: 0 }}>
+                  {item.label}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => scrollToHeading(item.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: item.level === 2 ? '13px' : '12px', fontWeight: item.level === 2 ? 600 : 400, color: item.level === 2 ? '#1a3a6e' : '#4a7fc1', fontFamily: 'inherit', textAlign: 'left', lineHeight: 1.5 }}
+                >
+                  {item.text}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ fontSize: '12px', color: '#888', margin: 0 }}>H2·H3 헤딩이 없습니다. 본문에 헤딩 추가 후 다시 삽입하세요.</p>
+        )}
+      </div>
+    </NodeViewWrapper>
+  )
+}
+
+const SummaryListNode = Node.create({
+  name: 'summaryList',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  addAttributes() {
+    return {
+      title: { default: '핵심 목록' },
+      items: {
+        default: [],
+        parseHTML: (el) => {
+          const result: SummaryItem[] = []
+          el.querySelectorAll('li[data-level]').forEach((li) => {
+            const a = li.querySelector('a')
+            if (a) result.push({
+              level: parseInt(li.getAttribute('data-level') ?? '2') as 2 | 3,
+              text: a.textContent ?? '',
+              id: (a.getAttribute('href') ?? '').slice(1),
+            })
+          })
+          return result
+        },
+        renderHTML: () => ({}),
+      },
+    }
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-type="summary-list"]' }]
+  },
+  renderHTML({ node }) {
+    const title = node.attrs.title as string
+    const items = (node.attrs.items as SummaryItem[]) ?? []
+    let h2Count = 0, h3Count = 0
+    const ol: unknown[] = ['ol', {}]
+    for (const item of items) {
+      let label: string
+      if (item.level === 2) { h2Count++; h3Count = 0; label = `${h2Count}.` }
+      else { h3Count++; label = `${h2Count}.${h3Count}` }
+      ol.push(['li', { 'data-level': String(item.level) },
+        ['span', { class: 'summary-num' }, label],
+        ['a', { href: `#${item.id}` }, item.text],
+      ])
+    }
+    return ['div', { 'data-type': 'summary-list', 'data-title': title }, ol]
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(SummaryListView)
+  },
+})
+
+// ── Heading with auto ID ─────────────────────────────────────────
+
+const HeadingWithId = Heading.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const level = node.attrs.level as number
+    const id = toHeadingId(node.textContent)
+    return [`h${level}`, mergeAttributes(HTMLAttributes, { id }), 0]
+  },
+})
+
 // ── Custom node: VideoEmbed ─────────────────────────────────────
 
 function VideoEmbedView({ node, selected }: NodeViewProps) {
@@ -161,6 +283,13 @@ const VideoEmbedNode = Node.create({
     return ReactNodeViewRenderer(VideoEmbedView)
   },
 })
+
+// ── Image node (selectable / draggable / cut & paste across editors) ──
+// Extending the default Image node with `draggable` lets the user grab an
+// inserted image and move it to another position. Because the src is a public
+// URL, the default HTML clipboard handles cut/copy/paste — including pasting
+// into a different editor instance.
+const DraggableImage = ImageExt.extend({ draggable: true })
 
 // ── Color presets ────────────────────────────────────────────────
 
@@ -226,6 +355,20 @@ function Toolbar({ editor, extraRight }: { editor: Editor | null; extraRight?: R
       return
     }
     editor.chain().focus().insertContent({ type: 'videoEmbed', attrs: { src: embedUrl } }).run()
+  }
+
+  const addSummaryList = () => {
+    const items: SummaryItem[] = []
+    editor.state.doc.forEach((node) => {
+      if (node.type.name === 'heading' && (node.attrs.level === 2 || node.attrs.level === 3)) {
+        const text = node.textContent.trim()
+        if (text) items.push({ level: node.attrs.level as 2 | 3, text, id: toHeadingId(text) })
+      }
+    })
+    editor.chain().focus().insertContent({
+      type: 'summaryList',
+      attrs: { title: '핵심 목록', items },
+    }).run()
   }
 
   return (
@@ -357,6 +500,15 @@ function Toolbar({ editor, extraRight }: { editor: Editor | null; extraRight?: R
       >
         <Lightbulb size={11} /> 팁 박스
       </button>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); addSummaryList() }}
+        className="flex items-center gap-1 px-2.5 py-1 rounded-[5px] text-[11px] font-semibold transition-colors font-[inherit]"
+        style={{ background: '#F0F7FF', color: '#0070F3', border: '1px solid #B3D4FC' }}
+        title="요약 목록 삽입 (H2·H3 자동 추출)"
+      >
+        <ListChecks size={11} /> 요약 목록
+      </button>
       {extraRight}
     </div>
   )
@@ -367,69 +519,107 @@ function Toolbar({ editor, extraRight }: { editor: Editor | null; extraRight?: R
 interface TiptapEditorProps {
   initialContent: string
   onChange: (html: string) => void
+  postId: number
 }
 
-export default function TiptapEditor({ initialContent, onChange }: TiptapEditorProps) {
+export default function TiptapEditor({ initialContent, onChange, postId }: TiptapEditorProps) {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const editorRef = useRef<Editor>(null)
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3] },
-        codeBlock: false,
-        code: false,
-      }),
-      Placeholder.configure({ placeholder: '본문을 작성하세요...' }),
-      LinkExt.configure({ openOnClick: false, HTMLAttributes: { class: 'tiptap-link' } }),
-      ImageExt.configure({ inline: false, allowBase64: false }),
-      TextStyleExt,
-      ColorExt,
-      LawBoxNode,
-      TipBoxNode,
-      VideoEmbedNode,
-    ],
-    content: initialContent,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
-    editorProps: {
-      attributes: { class: 'tiptap-prose outline-none' },
-    },
-  })
+  // Compress + upload an image file to Supabase storage; returns the public URL.
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const compressed = await imageCompression(file, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    })
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase()
+    const objectKey = `posts/${postId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage
+      .from('post-images')
+      .upload(objectKey, compressed, { contentType: compressed.type, upsert: false })
+    if (error) throw error
+    const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(objectKey)
+    return publicUrl
+  }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !editor) return
-    e.target.value = ''
-
+  // Upload an image file then insert it — at `pos` for drops, else at the cursor.
+  const insertImageFromFile = async (file: File, pos?: number) => {
+    const ed = editorRef.current
+    if (!ed) return
     setUploading(true)
     try {
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-      })
-
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-
-      const { error } = await supabase.storage
-        .from('post-images')
-        .upload(fileName, compressed, { contentType: compressed.type, upsert: false })
-
-      if (error) throw error
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('post-images')
-        .getPublicUrl(fileName)
-
-      editor.chain().focus().setImage({ src: publicUrl }).run()
+      const url = await uploadImage(file)
+      if (!url) return
+      const chain = ed.chain().focus()
+      if (typeof pos === 'number') chain.insertContentAt(pos, { type: 'image', attrs: { src: url } }).run()
+      else                         chain.setImage({ src: url }).run()
     } catch (err) {
       console.error('Image upload failed:', err)
       alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setUploading(false)
     }
+  }
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        codeBlock: false,
+        code: false,
+      }),
+      HeadingWithId.configure({ levels: [2, 3] }),
+      Placeholder.configure({ placeholder: '본문을 작성하세요...' }),
+      LinkExt.configure({ openOnClick: false, HTMLAttributes: { class: 'tiptap-link' } }),
+      DraggableImage.configure({ inline: false, allowBase64: false }),
+      TextStyleExt,
+      ColorExt,
+      LawBoxNode,
+      TipBoxNode,
+      VideoEmbedNode,
+      SummaryListNode,
+    ],
+    content: initialContent,
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      attributes: { class: 'tiptap-prose outline-none' },
+      // Paste an image straight from the OS clipboard (e.g. a screenshot) → upload + insert.
+      handlePaste: (_view, event) => {
+        const items = event.clipboardData?.items
+        if (!items) return false
+        for (const item of Array.from(items)) {
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile()
+            if (file) { insertImageFromFile(file); return true }
+          }
+        }
+        return false // text/HTML (incl. a cut image's <img>) → default handling
+      },
+      // Drop image files from the OS → upload at drop position. Dragging an
+      // existing image node carries no files, so we defer to ProseMirror's move.
+      handleDrop: (view, event) => {
+        const files = event.dataTransfer?.files
+        if (!files || files.length === 0) return false
+        const images = Array.from(files).filter((f) => f.type.startsWith('image/'))
+        if (images.length === 0) return false
+        event.preventDefault()
+        const coords = view.posAtCoords({ left: event.clientX, top: event.clientY })
+        images.forEach((f) => insertImageFromFile(f, coords?.pos))
+        return true
+      },
+    },
+  })
+
+  useEffect(() => { editorRef.current = editor }, [editor])
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    await insertImageFromFile(file)
   }
 
   const imageBtn = (

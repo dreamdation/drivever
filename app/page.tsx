@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { INITIAL_POSTS, INITIAL_HERO } from '@/lib/data'
-import { supabase, rowToPost, PostRow } from '@/lib/supabase'
+import { supabase, rowToPost, PostRow, fetchHeroSlides } from '@/lib/supabase'
 import HomeClient from '@/components/blog/HomeClient'
 
 export const metadata: Metadata = {
@@ -64,10 +64,13 @@ export default async function HomePage() {
     .filter((p) => !staticIds.has(p.id))
   const allPosts = [...INITIAL_POSTS, ...supaPosts].sort((a, b) => b.date.localeCompare(a.date))
 
+  // Hero is DB-backed; fall back to the seed only when no row exists yet.
+  const heroSlides = (await fetchHeroSlides()) ?? INITIAL_HERO
+
   return (
     <>
       <BlogJsonLd />
-      <HomeClient initialPosts={allPosts} initialHero={INITIAL_HERO} />
+      <HomeClient initialPosts={allPosts} initialHero={heroSlides} />
     </>
   )
 }

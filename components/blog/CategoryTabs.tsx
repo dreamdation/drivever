@@ -2,7 +2,8 @@
 
 import { cn } from '@/lib/utils'
 
-const CATS = ['전체', '교통법규', 'Premium Garage', '안전운전', '차량관리']
+const CATS = ['전체', '교통법규', '안전운전', 'Premium Garage', '차량관리']
+const VISIBLE_CATS = CATS.filter((c) => c !== '차량관리')
 
 interface CategoryTabsProps {
   active: string
@@ -14,7 +15,7 @@ export default function CategoryTabs({ active, onChange, variant = 'chip' }: Cat
   if (variant === 'underline') {
     return (
       <div className="flex gap-0 overflow-x-auto">
-        {CATS.map((c) => (
+        {VISIBLE_CATS.map((c) => (
           <button
             key={c}
             onClick={() => onChange(c)}
@@ -34,7 +35,7 @@ export default function CategoryTabs({ active, onChange, variant = 'chip' }: Cat
 
   return (
     <div className="flex gap-0.5 overflow-x-auto">
-      {CATS.map((c) => (
+      {VISIBLE_CATS.map((c) => (
         <button
           key={c}
           onClick={() => onChange(c)}

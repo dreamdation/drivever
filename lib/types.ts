@@ -23,6 +23,7 @@ export interface Post {
   views?: number
   content: ContentBlock[]
   bodyHtml?: string
+  deletedAt?: string | null
 }
 
 export interface HeroSlide {
@@ -40,4 +41,5 @@ export interface Comment {
   name: string
   text: string
   date: string
+  isAdmin?: boolean
 }

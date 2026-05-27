@@ -17,21 +17,27 @@ interface HomeClientProps {
 }
 
 export default function HomeClient({ initialPosts, initialHero }: HomeClientProps) {
-  const { posts: storePosts, heroSlides: storeHero, _hydrated } = useBlogStore()
+  const { posts: storePosts, _hydrated } = useBlogStore()
 
+  // SSR-first: the server-provided list is authoritative (it already includes
+  // all published seed + DB posts). The store only contributes posts the server
+  // didn't return, and never overrides a server copy — so admin-synced "lite"
+  // stubs can't shadow the real post data.
   const posts = _hydrated
     ? (() => {
-        const storeIds = new Set(storePosts.map((p) => p.id))
-        const merged = [...storePosts, ...initialPosts.filter((p) => !storeIds.has(p.id))]
+        const initialIds = new Set(initialPosts.map((p) => p.id))
+        const merged = [...initialPosts, ...storePosts.filter((p) => !initialIds.has(p.id))]
         return merged.sort((a, b) => b.date.localeCompare(a.date))
       })()
     : initialPosts
-  const heroSlides = _hydrated ? storeHero : initialHero
+  // Hero is DB-backed and served by SSR (authoritative) — don't override it with
+  // the per-browser localStorage copy, which is stale/empty for most visitors.
+  const heroSlides = initialHero
 
   const [cat, setCat] = useState('전체')
   const [page, setPage] = useState(1)
 
-  const published = posts.filter((p) => p.published !== false)
+  const published = posts.filter((p) => p.published !== false && p.slug && p.title && !p.deletedAt)
   const filtered = cat === '전체' ? published : published.filter((p) => p.category === cat)
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))

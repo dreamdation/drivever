@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Plus, Search, Pencil, Trash2, CheckCircle2, FileText } from 'lucide-react'
 import { Post } from '@/lib/types'
 
 const CAT_COLOR: Record<string, string> = {
@@ -13,6 +13,7 @@ const CAT_COLOR: Record<string, string> = {
 const CATS = ['전체', '교통법규', 'Premium Garage', '안전운전', '차량관리']
 
 type SortKey = 'date' | 'status' | 'views' | 'comments'
+export type BulkStatus = 'published' | 'draft' | 'trash'
 
 type ColDef = { key: string; label: string; sortable?: SortKey }
 
@@ -28,33 +29,45 @@ const COLS: ColDef[] = [
   { key: 'actions',  label: '관리' },
 ]
 
+// Fixed widths (px) for every non-title column. The title column gets a
+// user-resizable width; a trailing spacer column absorbs leftover space so the
+// table fills the wrapper at wide widths. The wrapper itself grows past the
+// viewport (w-fit) when the columns need more room, so the last column ('휴지통')
+// is never clipped — the content area scrolls instead.
+const COL_W = { select: 44, no: 52, category: 130, date: 128, views: 88, comments: 88, readTime: 92, status: 100, actions: 130 }
+const FIXED_W = Object.values(COL_W).reduce((a, b) => a + b, 0)
+
 interface AdminDashboardProps {
   posts: Post[]
   commentCounts?: Record<number, number>
+  heroPostIds?: number[]
   onEdit: (post: Post) => void
   onNew: () => void
   onTogglePublish: (id: number) => void
-  onDelete: (id: number) => void
+  onTrash: (id: number) => void
+  onBulkStatus: (ids: number[], status: BulkStatus) => void
 }
 
-export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNew, onTogglePublish, onDelete }: AdminDashboardProps) {
+export default function AdminDashboard({ posts, commentCounts = {}, heroPostIds = [], onEdit, onNew, onTogglePublish, onTrash, onBulkStatus }: AdminDashboardProps) {
   const [statusFilter, setStatusFilter] = useState('전체')
   const [catFilter,    setCatFilter]    = useState('전체')
   const [search,       setSearch]       = useState('')
   const [sortKey,      setSortKey]      = useState<SortKey | null>(null)
   const [sortDir,      setSortDir]      = useState<'asc' | 'desc'>('desc')
+  const [selected,     setSelected]     = useState<Set<number>>(new Set())
   const [titleWidth,   setTitleWidth]   = useState(460)
   const [isDragging,   setIsDragging]   = useState(false)
+  const selectAllRef = useRef<HTMLInputElement>(null)
   const resizingRef   = useRef(false)
   const startXRef     = useRef(0)
   const startWidthRef = useRef(0)
 
-  // Fixed widths (px) for all non-title columns
-  const COL_W = { no: 52, category: 130, date: 100, views: 88, comments: 88, readTime: 92, status: 100, actions: 130 }
-  const FIXED_W = Object.values(COL_W).reduce((a, b) => a + b, 0) // 676
+  // Posts currently registered to a hero slide — their titles render in blue.
+  const heroSet = new Set(heroPostIds)
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     resizingRef.current   = true
     startXRef.current     = e.clientX
     startWidthRef.current = titleWidth
@@ -62,7 +75,7 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
 
     const onMove = (ev: MouseEvent) => {
       if (!resizingRef.current) return
-      const next = Math.max(120, Math.min(600, startWidthRef.current + ev.clientX - startXRef.current))
+      const next = Math.max(120, Math.min(720, startWidthRef.current + ev.clientX - startXRef.current))
       setTitleWidth(next)
     }
     const onUp = () => {
@@ -119,8 +132,44 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
     return sortDir === 'desc' ? bVal - aVal : aVal - bVal
   })
 
+  // ── Selection ──────────────────────────────────────────────
+  const allVisibleSelected = sorted.length > 0 && sorted.every((p) => selected.has(p.id))
+  const someVisibleSelected = sorted.some((p) => selected.has(p.id))
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someVisibleSelected && !allVisibleSelected
+    }
+  }, [someVisibleSelected, allVisibleSelected])
+
+  const toggleAll = () => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (allVisibleSelected) sorted.forEach((p) => next.delete(p.id))
+      else                    sorted.forEach((p) => next.add(p.id))
+      return next
+    })
+  }
+
+  const toggleOne = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else              next.add(id)
+      return next
+    })
+  }
+
+  const applyBulk = (status: BulkStatus) => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (status === 'trash' && !confirm(`선택한 ${ids.length}개 포스트를 휴지통으로 이동하시겠습니까?`)) return
+    onBulkStatus(ids, status)
+    setSelected(new Set())
+  }
+
   return (
-    <div className="p-8 max-w-[1200px]">
+    <div className="p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-7">
         <div>
@@ -191,13 +240,52 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border border-border rounded-[8px] overflow-hidden bg-surface">
+      {/* Bulk action bar — shown when one or more posts are selected */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-[8px] border border-accent-border bg-accent-light flex-wrap">
+          <span className="text-sm font-bold text-accent">{selected.size}개 선택됨</span>
+          <span className="text-xs text-fg-3">상태 일괄 변경:</span>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => applyBulk('published')}
+              className="inline-flex items-center gap-1 px-3 py-[5px] rounded-[6px] border-none cursor-pointer text-xs font-bold font-[inherit] transition-colors"
+              style={{ background: '#ECFDF5', color: '#059669' }}
+            >
+              <CheckCircle2 size={13} /> 발행
+            </button>
+            <button
+              onClick={() => applyBulk('draft')}
+              className="inline-flex items-center gap-1 px-3 py-[5px] rounded-[6px] border-none cursor-pointer text-xs font-bold font-[inherit] transition-colors"
+              style={{ background: '#F3F4F6', color: '#555' }}
+            >
+              <FileText size={13} /> 임시저장
+            </button>
+            <button
+              onClick={() => applyBulk('trash')}
+              className="inline-flex items-center gap-1 px-3 py-[5px] rounded-[6px] border-none cursor-pointer text-xs font-bold font-[inherit] transition-colors"
+              style={{ background: '#FFF0F0', color: '#C0392B' }}
+            >
+              <Trash2 size={13} /> 휴지통
+            </button>
+          </div>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="ml-auto text-xs text-fg-3 hover:text-fg bg-transparent border-none cursor-pointer font-[inherit]"
+          >
+            선택 해제
+          </button>
+        </div>
+      )}
+
+      {/* Table — the box (w-fit min-w-full) fills the area at wide widths and
+          grows past it when columns need more room, so '휴지통' is never clipped. */}
+      <div className="border border-border rounded-[8px] overflow-hidden bg-surface w-fit min-w-full">
         <table
           className="border-collapse"
           style={{ tableLayout: 'fixed', width: '100%', minWidth: titleWidth + FIXED_W }}
         >
           <colgroup>
+            <col style={{ width: COL_W.select }} />
             <col style={{ width: COL_W.no }} />
             <col style={{ width: titleWidth }} />
             <col style={{ width: COL_W.category }} />
@@ -211,6 +299,17 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
           </colgroup>
           <thead>
             <tr className="border-b border-border">
+              <th className="px-4 py-2.5 text-center">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={toggleAll}
+                  className="w-4 h-4 cursor-pointer align-middle"
+                  style={{ accentColor: '#0070F3' }}
+                  aria-label="전체 선택"
+                />
+              </th>
               {COLS.map((col) => (
                 <th
                   key={col.key}
@@ -237,7 +336,8 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
                   {col.key === 'title' && (
                     <div
                       onMouseDown={startResize}
-                      title="드래그하여 너비 조절"
+                      onClick={(e) => e.stopPropagation()}
+                      title="드래그하여 제목 열 너비 조절"
                       className="group/handle"
                       style={{
                         position: 'absolute', right: 0, top: 0, bottom: 0,
@@ -248,14 +348,12 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
                         transition: 'background 0.15s',
                       }}
                     >
-                      {/* 드래그 활성 시: 전체 높이 파란 선 */}
                       {isDragging && (
                         <div style={{
                           position: 'absolute', right: 0, top: 0, bottom: 0,
                           width: 2, background: '#0070F3', borderRadius: 1,
                         }} />
                       )}
-                      {/* 기본/호버: 3점 그립 아이콘 */}
                       {!isDragging && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
                           {[0, 1, 2].map((i) => (
@@ -281,16 +379,31 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
           <tbody>
             {sorted.map((p) => {
               const cc = CAT_COLOR[p.category] || '#555'
+              const inHero = heroSet.has(p.id)
+              const isSel = selected.has(p.id)
               return (
                 <tr
                   key={p.id}
                   className="bg-white border-b border-border last:border-0 hover:bg-surface transition-colors duration-100"
+                  style={isSel ? { background: '#F5F9FF' } : undefined}
                 >
+                  <td className="px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSel}
+                      onChange={() => toggleOne(p.id)}
+                      className="w-4 h-4 cursor-pointer align-middle"
+                      style={{ accentColor: '#0070F3' }}
+                      aria-label={`${p.title} 선택`}
+                    />
+                  </td>
                   <td className="px-4 py-3 text-xs text-fg-3 tabular-nums text-center whitespace-nowrap">{postNoMap.get(p.id)}</td>
                   <td className="px-4 py-3 text-sm font-semibold text-fg">
                     <button
                       onClick={() => onEdit(p)}
-                      className="overflow-hidden text-ellipsis whitespace-nowrap text-left w-full border-none bg-transparent font-semibold text-fg font-[inherit] text-sm hover:text-accent transition-colors cursor-pointer"
+                      title={inHero ? '히어로 슬라이드에 등록된 포스트' : undefined}
+                      className="overflow-hidden text-ellipsis whitespace-nowrap text-left w-full border-none bg-transparent font-semibold font-[inherit] text-sm transition-colors cursor-pointer"
+                      style={inHero ? { color: '#0070F3' } : undefined}
                     >
                       {p.title}
                     </button>
@@ -332,10 +445,11 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
                         <Pencil size={13} />수정
                       </button>
                       <button
-                        onClick={() => { if (confirm('이 포스트를 삭제하시겠습니까?')) onDelete(p.id) }}
+                        onClick={() => { if (confirm('이 포스트를 휴지통으로 보내시겠습니까?\n휴지통에서 복원하거나 완전 삭제할 수 있습니다.')) onTrash(p.id) }}
                         className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit] whitespace-nowrap"
+                        title="휴지통으로 이동"
                       >
-                        <Trash2 size={13} />삭제
+                        <Trash2 size={13} />휴지통
                       </button>
                     </div>
                   </td>
@@ -345,7 +459,7 @@ export default function AdminDashboard({ posts, commentCounts = {}, onEdit, onNe
             })}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-sm text-fg-3">
+                <td colSpan={11} className="px-4 py-10 text-center text-sm text-fg-3">
                   검색 결과가 없습니다.
                 </td>
               </tr>

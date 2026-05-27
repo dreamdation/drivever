@@ -39,10 +39,14 @@ export default function HeroCarousel({ slides, posts }: HeroCarouselProps) {
   if (!slides.length) return null
   const slide = slides[current]
 
-  const getBg = (s: HeroSlide) =>
-    s.image
-      ? `url(${s.image}) center/cover no-repeat`
+  // Manual background URL wins; otherwise fall back to the connected post's
+  // thumbnail. Only when neither exists do we use the gradient.
+  const getBg = (s: HeroSlide) => {
+    const img = (s.image && s.image.trim()) || posts.find((p) => p.id === s.postId)?.thumbnail
+    return img
+      ? `url(${img}) center/cover no-repeat`
       : s.bg || 'linear-gradient(135deg, #0a1628 0%, #162d4a 100%)'
+  }
 
   const handleReadMore = () => {
     const post = posts.find((p) => p.id === slide.postId)
@@ -97,11 +101,12 @@ export default function HeroCarousel({ slides, posts }: HeroCarouselProps) {
 
           {/* Title */}
           <h2
-            className="text-white font-bold leading-tight mb-2.5 max-w-[620px] text-pretty"
+            className="text-white font-bold leading-tight mb-2.5 max-w-[620px]"
             style={{
               fontSize: 'clamp(1.5rem, 3.5vw, 2.375rem)',
               letterSpacing: '-0.03em',
               textShadow: '0 2px 16px rgba(0,0,0,0.4)',
+              whiteSpace: 'pre-line',
             }}
           >
             {slide.title}

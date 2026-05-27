@@ -113,7 +113,7 @@
 
 /* ── Article Content ──────────────────────────────────────── */
 .article-body p {
-  font-size: 1.0625rem;
+  font-size: 1rem;
   color: #333;
   line-height: 1.75;
   letter-spacing: -0.01em;
@@ -126,7 +126,7 @@
   font-weight: 700;
   color: #111;
   letter-spacing: -0.02em;
-  margin: 8px 0 0;
+  margin: 2.5rem 0 0;
   scroll-margin-top: 80px;
 }
 
@@ -194,7 +194,7 @@
   list-style: disc;
   padding-left: 1.5rem;
   margin-top: 14px;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   color: #333;
   line-height: 1.75;
 }
@@ -203,7 +203,7 @@
   list-style: decimal;
   padding-left: 1.5rem;
   margin-top: 14px;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   color: #333;
   line-height: 1.75;
 }
@@ -245,6 +245,73 @@
   border-radius: 8px;
 }
 
+.article-body [data-type="summary-list"] {
+  background: #F0F7FF;
+  border: 1.5px solid #B3D4FC;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 20px 0;
+}
+
+.article-body [data-type="summary-list"]::before {
+  content: attr(data-title);
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0070F3;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+.article-body [data-type="summary-list"] ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.article-body [data-type="summary-list"] li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.article-body [data-type="summary-list"] li[data-level="3"] {
+  padding-left: 1.25rem;
+}
+
+.article-body [data-type="summary-list"] .summary-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0070F3;
+  min-width: 22px;
+  flex-shrink: 0;
+}
+
+.article-body [data-type="summary-list"] li[data-level="3"] .summary-num {
+  color: #4a7fc1;
+  min-width: 32px;
+}
+
+.article-body [data-type="summary-list"] a {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a3a6e;
+  text-decoration: none;
+  line-height: 1.5;
+}
+
+.article-body [data-type="summary-list"] li[data-level="3"] a {
+  font-size: 12px;
+  font-weight: 400;
+  color: #4a7fc1;
+}
+
+.article-body [data-type="summary-list"] a:hover {
+  color: #0070F3;
+  text-decoration: underline;
+}
+
 .article-body img {
   max-width: 100%;
   height: auto;
@@ -258,11 +325,19 @@
   border-radius: 8px;
   margin: 16px 0;
   display: block;
+  cursor: grab;          /* hint that the image can be dragged to a new spot */
+}
+
+/* Selected image (click to select) — clear ring so cut/copy/move is obvious */
+.tiptap-prose img.ProseMirror-selectednode,
+.tiptap-prose .ProseMirror-selectednode {
+  outline: 2px solid #0070F3;
+  outline-offset: 2px;
 }
 
 /* ── Tiptap editor prose styles ──────────────────────────────── */
 .tiptap-prose {
-  font-size: 0.9375rem;
+  font-size: 1rem;
   line-height: 1.75;
   color: #333;
   letter-spacing: -0.01em;
@@ -274,7 +349,7 @@
   font-weight: 700;
   color: #111;
   letter-spacing: -0.02em;
-  margin: 20px 0 4px;
+  margin: 2.5rem 0 4px;
 }
 
 .tiptap-prose h3 {
@@ -285,12 +360,20 @@
   margin: 16px 0 4px;
 }
 
-.tiptap-prose p { margin-top: 12px; }
+.tiptap-prose p {
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+  margin-top: 14px;
+}
 .tiptap-prose p:first-child { margin-top: 0; }
 
-.tiptap-prose ul { list-style: disc; padding-left: 1.5rem; margin-top: 12px; }
-.tiptap-prose ol { list-style: decimal; padding-left: 1.5rem; margin-top: 12px; }
+.tiptap-prose ul { list-style: disc; padding-left: 1.5rem; margin-top: 14px; font-size: 1rem; color: #333; line-height: 1.75; }
+.tiptap-prose ol { list-style: decimal; padding-left: 1.5rem; margin-top: 14px; font-size: 1rem; color: #333; line-height: 1.75; }
 .tiptap-prose li { margin-top: 4px; }
+
+.tiptap-prose [data-type="summary-list"] { margin: 20px 0; }
 
 .tiptap-prose strong { font-weight: 700; }
 .tiptap-prose em { font-style: italic; }

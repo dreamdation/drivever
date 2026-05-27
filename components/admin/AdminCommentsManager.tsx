@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, MessageSquare } from 'lucide-react'
+import { Trash2, MessageSquare, Crown } from 'lucide-react'
 import { Post } from '@/lib/types'
 import { supabase, CommentRow } from '@/lib/supabase'
 
@@ -13,6 +13,7 @@ interface CommentWithMeta {
   text: string
   date: string
   created_at: string
+  isAdmin: boolean
 }
 
 interface AdminCommentsManagerProps {
@@ -41,6 +42,7 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
               text:       r.text,
               date:       r.date,
               created_at: r.created_at,
+              isAdmin:    r.is_admin,
             }))
           )
         }
@@ -117,7 +119,12 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
                 <td className="px-4 py-3 text-xs text-fg-2 max-w-[180px]">
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap">{c.postTitle}</div>
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-fg whitespace-nowrap">{c.name}</td>
+                <td className="px-4 py-3 text-sm font-semibold text-fg whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    {c.isAdmin && <Crown size={12} style={{ color: '#0070F3' }} />}
+                    {c.name}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-sm text-fg-2 max-w-[300px]">
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap">{c.text}</div>
                 </td>

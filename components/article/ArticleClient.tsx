@@ -21,21 +21,28 @@ interface ArticleClientProps {
 }
 
 export default function ArticleClient({ postId, staticPost, allStaticPosts }: ArticleClientProps) {
-  const { posts: storePosts, _hydrated, incrementViews } = useBlogStore()
+  const { posts: storePosts, _hydrated, incrementViews, setActivePost } = useBlogStore()
   const allPosts = _hydrated
     ? (() => {
         const storeIds = new Set(storePosts.map((p) => p.id))
         return [...storePosts, ...allStaticPosts.filter((p) => !storeIds.has(p.id))]
       })()
     : allStaticPosts
-  const post = allPosts.find((p) => p.id === postId) ?? staticPost
+  // SSR is the source of truth for the article body. A store copy is used only
+  // when it actually carries a body (e.g. an in-session edit); otherwise we fall
+  // back to the server-provided staticPost. This stops a body-less "lite" store
+  // copy (synced by the admin dashboard) from shadowing the full post and
+  // rendering a blank article until a hard refresh.
+  const hasBody = (p?: Post) => !!(p && (p.bodyHtml || (p.content?.length ?? 0) > 0))
+  const fromStore = allPosts.find((p) => p.id === postId)
+  const post = hasBody(fromStore) ? fromStore! : staticPost
 
   const [activeId, setActiveId] = useState<string | null>(null)
   const catStyle = getCategoryStyle(post.categoryColor)
   const h2Count = useRef(0)
 
   const related = allPosts
-    .filter((p) => p.id !== post.id && p.published !== false)
+    .filter((p) => p.id !== post.id && p.published !== false && !p.deletedAt)
     .slice(0, 4)
 
   const hasToc = (post.content ?? []).some((b) => b.type === 'h2' || b.type === 'h3')
@@ -45,6 +52,13 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
     if (!_hydrated) return
     incrementViews(postId)
   }, [_hydrated, postId, incrementViews])
+
+  // Publish the current post so the header's admin "수정" button can target it
+  // (works for DB-only posts that aren't in the seed store). Clear on leave.
+  useEffect(() => {
+    setActivePost({ id: post.id, slug: post.slug })
+    return () => setActivePost(null)
+  }, [post.id, post.slug, setActivePost])
 
   // Intersection Observer for active TOC section
   useEffect(() => {

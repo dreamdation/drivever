@@ -1,16 +1,17 @@
 'use client'
 
 import Image from 'next/image'
-import { LayoutGrid, PenSquare, LayoutTemplate, MessageSquare, ExternalLink, LogOut } from 'lucide-react'
+import { LayoutGrid, PenSquare, LayoutTemplate, MessageSquare, Trash2, ExternalLink, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type AdminView = 'dashboard' | 'editor' | 'hero' | 'comments'
+export type AdminView = 'dashboard' | 'editor' | 'hero' | 'comments' | 'trash'
 
 interface AdminSidebarProps {
   view: AdminView
   onNavigate: (v: AdminView) => void
   onLogout: () => void
   onGoSite: () => void
+  trashCount?: number
 }
 
 const NAV = [
@@ -18,9 +19,10 @@ const NAV = [
   { id: 'editor'    as AdminView, icon: PenSquare,       label: '새 글 작성' },
   { id: 'hero'      as AdminView, icon: LayoutTemplate,  label: '히어로 관리' },
   { id: 'comments'  as AdminView, icon: MessageSquare,   label: '댓글 관리' },
+  { id: 'trash'     as AdminView, icon: Trash2,          label: '휴지통' },
 ]
 
-export default function AdminSidebar({ view, onNavigate, onLogout, onGoSite }: AdminSidebarProps) {
+export default function AdminSidebar({ view, onNavigate, onLogout, onGoSite, trashCount = 0 }: AdminSidebarProps) {
   return (
     <aside
       className="w-[220px] shrink-0 flex flex-col justify-between border-r border-border bg-surface"
@@ -51,7 +53,15 @@ export default function AdminSidebar({ view, onNavigate, onLogout, onGoSite }: A
               )}
             >
               <Icon size={16} />
-              {label}
+              <span className="flex-1">{label}</span>
+              {id === 'trash' && trashCount > 0 && (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-[1px] rounded-full"
+                  style={{ background: '#FFE4E1', color: '#C0392B' }}
+                >
+                  {trashCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>

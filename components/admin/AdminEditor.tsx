@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Trash2, AlertTriangle } from 'lucide-react'
 import { Post, ContentBlock } from '@/lib/types'
 import { getCategoryColorFromName, toSlug } from '@/lib/utils'
 
@@ -28,15 +28,28 @@ function extractDescription(html: string): string {
   return text.length > 150 ? text.slice(0, 150) + '…' : text
 }
 
+// First <img> in the body — used as the post thumbnail automatically.
+function firstImageSrc(html: string): string {
+  const m = html.match(/<img[^>]+src=["']([^"']+)["']/i)
+  return m ? m[1] : ''
+}
+
 interface AdminEditorProps {
   posts: Post[]
   editPost: Post | null
   onBack: () => void
-  onSave: (posts: Post[]) => void
+  onSave: (posts: Post[]) => void | Promise<void>
+  onTrash?: () => void | Promise<void>
 }
 
-export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEditorProps) {
+export default function AdminEditor({ posts, editPost, onBack, onSave, onTrash }: AdminEditorProps) {
   const isNew = !editPost
+  const [trashConfirm, setTrashConfirm] = useState(false)
+  const [trashing,     setTrashing]     = useState(false)
+
+  // Stable post ID for the whole editor session.
+  // For new posts: generated once so uploads can be scoped to posts/{id}/ before first save.
+  const [postId] = useState<number>(() => editPost?.id ?? Date.now())
 
   const [title, setTitle] = useState(editPost?.title ?? '')
   const [slug, setSlug] = useState(editPost?.slug ?? '')
@@ -58,6 +71,11 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
 
   const description = extractDescription(bodyHtml)
 
+  // Thumbnail: the body's top-most image is used automatically. A manual URL
+  // (the optional override field) takes precedence when provided.
+  const autoThumbnail = firstImageSrc(bodyHtml)
+  const effectiveThumbnail = thumbnail.trim() || autoThumbnail
+
   const handleTitleChange = (val: string) => {
     setTitle(val)
     if (!slugManual) setSlug(toSlug(val))
@@ -76,7 +94,7 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
     let updated: Post[]
     if (isNew) {
       const newPost: Post = {
-        id: Date.now(),
+        id: postId,
         slug: finalSlug,
         title, category,
         categoryColor: getCategoryColorFromName(category),
@@ -87,13 +105,13 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
         date: finalDate,
         content: [],
         bodyHtml,
-        thumbnail: thumbnail || undefined,
+        thumbnail: effectiveThumbnail || undefined,
       }
       updated = [newPost, ...posts]
     } else {
       updated = posts.map((p) =>
         p.id === editPost!.id
-          ? { ...p, slug: finalSlug, title, category, categoryColor: getCategoryColorFromName(category), description, tags: tagArr, readTime: Number(readTime), published, date: finalDate, bodyHtml, thumbnail: thumbnail || undefined }
+          ? { ...p, slug: finalSlug, title, category, categoryColor: getCategoryColorFromName(category), description, tags: tagArr, readTime: Number(readTime), published, date: finalDate, bodyHtml, thumbnail: effectiveThumbnail || undefined }
           : p
       )
     }
@@ -131,6 +149,15 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
               {published ? '발행' : '임시저장'}
             </span>
           </div>
+          {!isNew && onTrash && (
+            <button
+              onClick={() => setTrashConfirm(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-border rounded-[6px] bg-white text-sm text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit]"
+              title="휴지통으로 이동"
+            >
+              <Trash2 size={13} />휴지통
+            </button>
+          )}
           <button
             onClick={save}
             className="px-5 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-[6px] border-none transition-colors font-[inherit]"
@@ -140,21 +167,77 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
         </div>
       </div>
 
+      {trashConfirm && onTrash && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => !trashing && setTrashConfirm(false)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            className="bg-white rounded-[10px] w-full max-w-[400px] p-6"
+            style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.2)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: '#FFF0F0', color: '#C0392B' }}
+              >
+                <AlertTriangle size={18} />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-base font-bold text-fg mb-1">휴지통으로 이동할까요?</h4>
+                <p className="text-sm text-fg-2 leading-relaxed">
+                  포스트가 휴지통으로 이동되고 일반 사용자에게 더 이상 노출되지 않습니다.
+                  휴지통에서 언제든 복원할 수 있습니다.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={trashing}
+                onClick={() => setTrashConfirm(false)}
+                className="px-4 py-2 border border-border rounded-[6px] bg-white text-sm text-fg-2 hover:bg-surface transition-colors font-[inherit] disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={trashing}
+                onClick={async () => {
+                  setTrashing(true)
+                  await onTrash()
+                }}
+                className="px-4 py-2 rounded-[6px] text-sm font-semibold text-white transition-colors font-[inherit] disabled:opacity-60"
+                style={{ background: '#C0392B' }}
+              >
+                {trashing ? '이동 중...' : '휴지통으로 이동'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid" style={{ gridTemplateColumns: '1fr 280px', minHeight: 'calc(100vh - 105px)' }}>
         {/* Main editor */}
         <div className="px-9 py-8 border-r border-border">
-          <textarea
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="제목을 입력하세요"
-            rows={2}
-            className="w-full border-none outline-none resize-none bg-transparent font-bold text-fg font-[inherit]"
-            style={{ fontSize: '1.625rem', lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '12px' }}
-          />
+          <div className="max-w-[720px]">
+            <textarea
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              placeholder="제목을 입력하세요"
+              rows={2}
+              className="w-full border-none outline-none resize-none bg-transparent font-bold text-fg font-[inherit]"
+              style={{ fontSize: '1.625rem', lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '12px' }}
+            />
 
-          <div className="h-px bg-border my-6" />
+            <div className="h-px bg-border my-6" />
 
-          <TiptapEditor initialContent={initialHtml} onChange={setBodyHtml} />
+            <TiptapEditor initialContent={initialHtml} onChange={setBodyHtml} postId={postId} />
+          </div>
         </div>
 
         {/* Meta sidebar */}
@@ -169,19 +252,33 @@ export default function AdminEditor({ posts, editPost, onBack, onSave }: AdminEd
             </select>
           </MetaField>
 
-          <MetaField label="썸네일 이미지 URL">
+          <MetaField label="썸네일">
+            {effectiveThumbnail ? (
+              <div className="rounded-[6px] overflow-hidden bg-[#F0F2F5]" style={{ aspectRatio: '16/9' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={effectiveThumbnail} alt="thumbnail" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.opacity = '0.2')} />
+              </div>
+            ) : (
+              <div
+                className="rounded-[6px] bg-[#F0F2F5] flex items-center justify-center text-center text-[11px] text-fg-3 leading-relaxed px-3"
+                style={{ aspectRatio: '16/9' }}
+              >
+                본문에 이미지를 추가하면<br />자동으로 썸네일이 됩니다
+              </div>
+            )}
+            <div className="text-[10px] text-fg-3 mt-1.5 leading-relaxed">
+              {thumbnail.trim()
+                ? '직접 지정한 URL을 썸네일로 사용 중입니다.'
+                : autoThumbnail
+                  ? '본문 최상단 이미지를 자동으로 사용 중입니다.'
+                  : '본문 최상단 이미지가 자동으로 썸네일이 됩니다.'}
+            </div>
             <input
               value={thumbnail}
               onChange={(e) => setThumbnail(e.target.value)}
-              placeholder="https://images.unsplash.com/..."
-              className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none font-[inherit]"
+              placeholder="(선택) 직접 URL 지정 — 비우면 자동"
+              className="w-full mt-2 px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none font-[inherit]"
             />
-            {thumbnail && (
-              <div className="mt-2 rounded-[6px] overflow-hidden bg-[#F0F2F5]" style={{ aspectRatio: '16/9' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumbnail} alt="thumbnail" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.opacity = '0.2')} />
-              </div>
-            )}
           </MetaField>
 
           <MetaField label="작성일시">

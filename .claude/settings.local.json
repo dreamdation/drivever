@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:api.anthropic.com)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "PowerShell(cd \"E:\\\\My Site\\\\Drivever-Blog-blue\"; \\(Get-Content \"scripts\\\\Drivever_WordPress.2026-04-29.xml\" -Raw\\) | Select-String -Pattern '<item>' -AllMatches | Select-Object -ExpandProperty Matches | Measure-Object | Select-Object -ExpandProperty Count)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('@tiptap/extension-color'\\); require\\('@tiptap/extension-text-style'\\); console.log\\('OK'\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "mcp__claude_ai_Supabase__list_tables",
+      "Bash(npm run *)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__get_advisors",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(node scripts/migrations/2026-05-20_storage_folder_restructure.mjs --dry-run)",
+      "Bash(node scripts/migrations/2026-05-20_ingest_wp_images.mjs --execute)",
+      "Bash(node scripts/migrations/2026-05-20_storage_folder_restructure.mjs --execute)",
+      "Bash(curl -s \"http://localhost:3000/blog/cold-medicine-drug-driving-test-results-%EC%95%BD%EB%AC%BC%EC%9A%B4%EC%A0%84\")",
+      "Bash(node scripts/migrations/2026-05-20_rewrite_wp_navlinks.mjs --execute)"
     ]
   }
 }
