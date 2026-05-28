@@ -42,9 +42,16 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
   const catStyle = getCategoryStyle(post.categoryColor)
   const h2Count = useRef(0)
 
-  const related = allPosts
-    .filter((p) => p.id !== post.id && p.published !== false && !p.deletedAt)
-    .slice(0, 4)
+  // Related posts: prefer the same category (newest first), then top up with
+  // other recent posts so the section always fills up to 4.
+  const byDateDesc = (a: Post, b: Post) => (b.date ?? '').localeCompare(a.date ?? '')
+  const candidates = allPosts.filter(
+    (p) => p.id !== post.id && p.published !== false && !p.deletedAt
+  )
+  const related = [
+    ...candidates.filter((p) => p.category === post.category).sort(byDateDesc),
+    ...candidates.filter((p) => p.category !== post.category).sort(byDateDesc),
+  ].slice(0, 4)
 
   const hasToc = (post.content ?? []).some((b) => b.type === 'h2' || b.type === 'h3')
 

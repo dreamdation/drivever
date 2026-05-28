@@ -86,13 +86,23 @@ export default async function ArticlePage({ params }: Props) {
     try { return decodeURIComponent(rawSlug) } catch { return rawSlug }
   })()
 
+  // Candidate pool for the "관련 글" sidebar: all published posts (the seed array
+  // is empty now that posts are DB-managed, so without this the pool — and thus
+  // the related section — was always empty). Mirrors the home page's fetch.
+  const { data: poolData } = await supabase.from('posts').select('*').eq('published', true)
+  const seedIds = new Set(INITIAL_POSTS.map((p) => p.id))
+  const allPosts = [
+    ...INITIAL_POSTS,
+    ...(poolData ?? []).map((r) => rowToPost(r as PostRow)).filter((p) => !seedIds.has(p.id)),
+  ]
+
   const staticPost = INITIAL_POSTS.find((p) => p.slug === slug)
 
   if (staticPost) {
     return (
       <>
         <ArticleJsonLd post={staticPost} />
-        <ArticleClient postId={staticPost.id} staticPost={staticPost} allStaticPosts={INITIAL_POSTS} />
+        <ArticleClient postId={staticPost.id} staticPost={staticPost} allStaticPosts={allPosts} />
       </>
     )
   }
@@ -113,7 +123,7 @@ export default async function ArticlePage({ params }: Props) {
   return (
     <>
       <ArticleJsonLd post={post} />
-      <ArticleClient postId={post.id} staticPost={post} allStaticPosts={INITIAL_POSTS} />
+      <ArticleClient postId={post.id} staticPost={post} allStaticPosts={allPosts} />
     </>
   )
 }
