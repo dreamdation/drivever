@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { useBlogStore } from '@/store/blogStore'
+import { sanitizeHtml } from '@/lib/sanitize'
 import LawBox from './LawBox'
 import TipBox from './TipBox'
 import TableOfContents from './TableOfContents'
@@ -12,7 +13,7 @@ import ShareBar from './ShareBar'
 import AdSlot from '@/components/blog/AdSlot'
 import PostCard from '@/components/blog/PostCard'
 import Footer from '@/components/layout/Footer'
-import { getCategoryStyle } from '@/lib/utils'
+import { getCategoryStyle, compareByDateDesc } from '@/lib/utils'
 import { Post, ContentBlock } from '@/lib/types'
 
 interface ArticleClientProps {
@@ -42,15 +43,21 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
   const catStyle = getCategoryStyle(post.categoryColor)
   const h2Count = useRef(0)
 
+  // Sanitize the stored HTML before injecting it (defense-in-depth against
+  // stored XSS). Only YouTube/Vimeo iframes survive; event handlers are stripped.
+  const safeBodyHtml = useMemo(
+    () => (post.bodyHtml ? sanitizeHtml(post.bodyHtml) : ''),
+    [post.bodyHtml]
+  )
+
   // Related posts: prefer the same category (newest first), then top up with
   // other recent posts so the section always fills up to 4.
-  const byDateDesc = (a: Post, b: Post) => (b.date ?? '').localeCompare(a.date ?? '')
   const candidates = allPosts.filter(
     (p) => p.id !== post.id && p.published !== false && !p.deletedAt
   )
   const related = [
-    ...candidates.filter((p) => p.category === post.category).sort(byDateDesc),
-    ...candidates.filter((p) => p.category !== post.category).sort(byDateDesc),
+    ...candidates.filter((p) => p.category === post.category).sort(compareByDateDesc),
+    ...candidates.filter((p) => p.category !== post.category).sort(compareByDateDesc),
   ].slice(0, 4)
 
   const hasToc = (post.content ?? []).some((b) => b.type === 'h2' || b.type === 'h3')
@@ -164,8 +171,8 @@ export default function ArticleClient({ postId, staticPost, allStaticPosts }: Ar
             <AdSlot size="leaderboard" label="광고 영역 — 본문 상단" />
 
             {/* bodyHtml (Tiptap) takes priority; falls back to legacy ContentBlock[] */}
-            {post.bodyHtml ? (
-              <article className="article-body" dangerouslySetInnerHTML={{ __html: post.bodyHtml }} />
+            {safeBodyHtml ? (
+              <article className="article-body" dangerouslySetInnerHTML={{ __html: safeBodyHtml }} />
             ) : (
               <article className="article-body">
                 {(post.content ?? []).map((block, i) => renderBlock(block, i))}

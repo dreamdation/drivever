@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Header from './Header'
 import SearchOverlay from './SearchOverlay'
+import CookieConsent from './CookieConsent'
 import { useBlogStore } from '@/store/blogStore'
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       {searchOpen && _hydrated && (
         <SearchOverlay posts={posts} onClose={() => setSearchOpen(false)} />
       )}
+      {!hideHeader && <CookieConsent />}
     </>
   )
 }

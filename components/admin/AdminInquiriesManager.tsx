@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Megaphone, Trash2, Mail, Phone, Building2 } from 'lucide-react'
-import { supabase, AdInquiryRow, InquiryStatus } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
+import { AdInquiryRow, InquiryStatus } from '@/lib/supabase'
 
 const STATUS_META: Record<InquiryStatus, { label: string; bg: string; color: string }> = {
   new:      { label: '신규',     bg: '#EBF3FF', color: '#0070F3' },

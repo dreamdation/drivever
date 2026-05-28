@@ -1,10 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Post, ContentBlock, HeroSlide } from '@/lib/types'
 
 const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Anonymous client for SERVER components (anon reads only — published posts,
+// hero slides, sitemap). It carries no user session, so it never needs cookies
+// and works in build-time contexts like generateStaticParams.
+// Client components must import the cookie-backed client from '@/lib/supabaseClient'.
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+})
 
 // ── DB row type (snake_case) ────────────────────────────────────
 
@@ -126,8 +132,10 @@ function rowToHeroSlide(r: HeroSlideRow): HeroSlide {
 
 // Returns slides ordered by sort_order, or null when there's no config yet
 // (empty table or error) so callers fall back to the INITIAL_HERO seed.
-export async function fetchHeroSlides(): Promise<HeroSlide[] | null> {
-  const { data, error } = await supabase
+// `client` is passed in so this works with either the server anon client or
+// the cookie-backed browser client.
+export async function fetchHeroSlides(client: SupabaseClient): Promise<HeroSlide[] | null> {
+  const { data, error } = await client
     .from('hero_slides')
     .select('id, post_id, category, title, description, bg, image, sort_order')
     .order('sort_order', { ascending: true })
@@ -137,7 +145,8 @@ export async function fetchHeroSlides(): Promise<HeroSlide[] | null> {
 
 // Full replace: upsert the current set (sort_order = display index), then delete
 // rows that are no longer present. Upsert runs first so a failure never wipes data.
-export async function saveHeroSlides(slides: HeroSlide[]): Promise<{ error: unknown }> {
+// Writes require the authenticated (cookie) client.
+export async function saveHeroSlides(client: SupabaseClient, slides: HeroSlide[]): Promise<{ error: unknown }> {
   const rows = slides.map((s, i) => ({
     id:          s.id,
     post_id:     s.postId ?? null,
@@ -150,13 +159,13 @@ export async function saveHeroSlides(slides: HeroSlide[]): Promise<{ error: unkn
   }))
 
   if (rows.length > 0) {
-    const { error } = await supabase.from('hero_slides').upsert(rows, { onConflict: 'id' })
+    const { error } = await client.from('hero_slides').upsert(rows, { onConflict: 'id' })
     if (error) return { error }
   }
 
   const keepIds = slides.map((s) => s.id)
   const { error } = keepIds.length > 0
-    ? await supabase.from('hero_slides').delete().not('id', 'in', `(${keepIds.join(',')})`)
-    : await supabase.from('hero_slides').delete().not('id', 'is', null) // cleared all slides
+    ? await client.from('hero_slides').delete().not('id', 'in', `(${keepIds.join(',')})`)
+    : await client.from('hero_slides').delete().not('id', 'is', null) // cleared all slides
   return { error: error ?? null }
 }

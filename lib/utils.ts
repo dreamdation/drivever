@@ -28,6 +28,13 @@ export function formatDate(iso: string): string {
   return iso.replace(/-/g, '.')
 }
 
+// Newest-first comparator that normalizes the post date format ("YYYY.MM.DD" or
+// "YYYY-MM-DD") before comparing, so mixed formats sort consistently.
+export function compareByDateDesc(a: { date?: string }, b: { date?: string }): number {
+  const norm = (d?: string) => (d ?? '').replace(/\./g, '-')
+  return norm(b.date).localeCompare(norm(a.date))
+}
+
 export function toHeadingId(text: string): string {
   return text.trim().toLowerCase()
     .replace(/\s+/g, '-')

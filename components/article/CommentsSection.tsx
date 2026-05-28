@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Trash2, Crown } from 'lucide-react'
 import { Comment } from '@/lib/types'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
 import { sha256Hex } from '@/lib/crypto'
 import { useAuth } from '@/lib/useAuth'
 
@@ -50,6 +50,18 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
   const [deleting,      setDeleting]      = useState(false)
   const [toast,         setToast]         = useState<string | null>(null)
 
+  // PIN-based self-delete for non-admin visitors (verified server-side via the
+  // delete_own_comment RPC against the stored SHA-256 hash of their 4-digit PIN).
+  const [pinTarget,  setPinTarget]  = useState<Comment | null>(null)
+  const [pinInput,   setPinInput]   = useState('')
+  const [pinError,   setPinError]   = useState<string | null>(null)
+  const [pinDeleting, setPinDeleting] = useState(false)
+
+  // Lightweight bot defenses (no external captcha): a honeypot field real users
+  // never see/fill, plus a minimum dwell time before a submission is accepted.
+  const [hp, setHp] = useState('')
+  const mountedAt = useRef(Date.now())
+
   useEffect(() => {
     supabase
       .from('comments')
@@ -74,6 +86,12 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
     e.preventDefault()
     setError(null)
     setWarning(null)
+
+    // Bot traps: honeypot filled, or submitted implausibly fast → silently drop.
+    if (hp.trim() !== '' || Date.now() - mountedAt.current < 2500) {
+      setError('잠시 후 다시 시도해주세요.')
+      return
+    }
 
     const trimText = text.trim()
     const trimName = isLoggedIn ? ADMIN_NAME : name.trim()
@@ -193,6 +211,41 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
     setTimeout(() => setToast(null), 2500)
   }
 
+  // Visitor self-delete: verify the 4-digit PIN server-side (hashed) via RPC.
+  const confirmPinDelete = async () => {
+    if (!pinTarget) return
+    const trimmed = pinInput.trim()
+    if (!PIN_RE.test(trimmed)) {
+      setPinError('비밀번호는 숫자 4자리입니다.')
+      return
+    }
+    setPinDeleting(true)
+    setPinError(null)
+    const target = pinTarget
+    const hash = await sha256Hex(trimmed)
+    const { data, error: rpcError } = await supabase.rpc('delete_own_comment', {
+      p_id: target.id,
+      p_pin_hash: hash,
+    })
+    setPinDeleting(false)
+
+    if (rpcError) {
+      // e.g. rate-limited (too many attempts)
+      setPinError(rpcError.message || '삭제에 실패했습니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
+    if (data !== true) {
+      setPinError('비밀번호가 일치하지 않습니다.')
+      return
+    }
+
+    setComments((prev) => prev.filter((c) => c.id !== target.id))
+    setPinTarget(null)
+    setPinInput('')
+    setToast('댓글이 삭제되었습니다.')
+    setTimeout(() => setToast(null), 2500)
+  }
+
   return (
     <div className="mt-12">
       <div className="h-px bg-border mb-7" />
@@ -234,12 +287,22 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
                     </span>
                   )}
                   <span className="text-[11px] text-[#bbb]">{c.date}</span>
-                  {isLoggedIn && (
+                  {isLoggedIn ? (
                     <button
                       type="button"
                       onClick={() => setConfirmTarget(c)}
                       className="ml-auto inline-flex items-center gap-1 px-2 py-[3px] border border-border rounded-[5px] bg-white text-[11px] text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit]"
                       aria-label="댓글 삭제"
+                    >
+                      <Trash2 size={11} />삭제
+                    </button>
+                  ) : !c.isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => { setPinTarget(c); setPinInput(''); setPinError(null) }}
+                      className="ml-auto inline-flex items-center gap-1 px-2 py-[3px] border border-border rounded-[5px] bg-white text-[11px] text-[#bbb] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit] opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      aria-label="내 댓글 삭제 (비밀번호 필요)"
+                      title="비밀번호로 내 댓글 삭제"
                     >
                       <Trash2 size={11} />삭제
                     </button>
@@ -253,6 +316,17 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
       )}
 
       <form onSubmit={submit} className="bg-surface border border-border rounded-[8px] p-5">
+        {/* Honeypot — hidden from users; bots tend to fill every field. */}
+        <input
+          type="text"
+          name="website"
+          value={hp}
+          onChange={(e) => setHp(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+        />
         {isLoggedIn ? (
           <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-[6px] bg-white border border-border">
             <div
@@ -386,6 +460,63 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
                 style={{ background: '#C0392B' }}
               >
                 {deleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pinTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.45)' }}
+          onClick={() => !pinDeleting && setPinTarget(null)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            className="bg-white rounded-[10px] w-full max-w-[360px] p-6"
+            style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="text-base font-bold text-fg mb-2">내 댓글 삭제</h4>
+            <p className="text-sm text-fg-2 leading-relaxed mb-3">
+              댓글 작성 시 설정한 <span className="font-semibold text-fg">비밀번호 4자리</span>를 입력하세요.
+            </p>
+            <input
+              value={pinInput}
+              onChange={(e) => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(null) }}
+              onKeyDown={(e) => { if (e.key === 'Enter') confirmPinDelete() }}
+              placeholder="••••"
+              inputMode="numeric"
+              type="password"
+              maxLength={4}
+              autoFocus
+              className="w-full px-3 py-2 border border-border rounded-[6px] text-sm outline-none bg-white tracking-[0.4em] text-center mb-2"
+            />
+            {pinError && (
+              <p className="text-xs font-semibold px-3 py-2 rounded-[6px] mb-2"
+                 style={{ background: '#FFF1F0', color: '#C0392B', border: '1px solid #FFD0D0' }}>
+                {pinError}
+              </p>
+            )}
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                type="button"
+                disabled={pinDeleting}
+                onClick={() => setPinTarget(null)}
+                className="px-4 py-2 border border-border rounded-[6px] bg-white text-sm text-fg-2 hover:bg-surface transition-colors font-[inherit] disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={pinDeleting}
+                onClick={confirmPinDelete}
+                className="px-4 py-2 rounded-[6px] text-sm font-semibold text-white transition-colors font-[inherit] disabled:opacity-60"
+                style={{ background: '#C0392B' }}
+              >
+                {pinDeleting ? '삭제 중...' : '삭제'}
               </button>
             </div>
           </div>

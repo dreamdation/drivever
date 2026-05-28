@@ -4,19 +4,50 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, X } from 'lucide-react'
 import { Post } from '@/lib/types'
+import { supabase } from '@/lib/supabaseClient'
 
 interface SearchOverlayProps {
   posts: Post[]
   onClose: () => void
 }
 
+// Minimal shape needed for search results.
+type Hit = Pick<Post, 'id' | 'slug' | 'title' | 'description' | 'category' | 'date' | 'tags' | 'published'>
+
 export default function SearchOverlay({ posts, onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState('')
+  // The Zustand store holds posts only inside the admin panel — for public
+  // visitors it's empty. Fetch the published posts directly so search works
+  // everywhere with the same authoritative data the SSR pages use.
+  const [dbPosts, setDbPosts] = useState<Hit[]>([])
   const router = useRouter()
+
+  useEffect(() => {
+    let active = true
+    supabase
+      .from('posts')
+      .select('id, slug, title, description, category, date, tags, published, deleted_at')
+      .eq('published', true)
+      .is('deleted_at', null)
+      .then(({ data }) => {
+        if (!active || !data) return
+        setDbPosts(
+          (data as (Hit & { deleted_at: string | null })[])
+            .filter((p) => p.slug && p.title)
+            .map(({ id, slug, title, description, category, date, tags, published }) => ({
+              id, slug, title, description, category, date, tags: tags ?? [], published,
+            }))
+        )
+      })
+    return () => { active = false }
+  }, [])
+
+  // Prefer freshly fetched posts; fall back to the store prop (admin sessions).
+  const pool: Hit[] = dbPosts.length ? dbPosts : posts
 
   const q = query.toLowerCase()
   const results = query.length > 1
-    ? posts.filter(
+    ? pool.filter(
         (p) =>
           p.published !== false &&
           (
@@ -33,6 +64,15 @@ export default function SearchOverlay({ posts, onClose }: SearchOverlayProps) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  // Enter → go to the full results page (/blog?q=), keeping on-site search in
+  // sync with the JSON-LD SearchAction target.
+  const goToResults = () => {
+    const term = query.trim()
+    if (term.length < 2) return
+    router.push(`/blog?q=${encodeURIComponent(term)}`)
+    onClose()
+  }
 
   return (
     <div
@@ -51,7 +91,8 @@ export default function SearchOverlay({ posts, onClose }: SearchOverlayProps) {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="검색어를 입력하세요..."
+            onKeyDown={(e) => { if (e.key === 'Enter') goToResults() }}
+            placeholder="검색어를 입력하세요... (Enter로 전체 결과 보기)"
             className="flex-1 text-base outline-none text-fg bg-transparent"
           />
           <button onClick={onClose} className="text-[#aaa] hover:text-fg transition-colors">

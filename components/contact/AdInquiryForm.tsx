@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Megaphone, CheckCircle2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
 
 const COOLDOWN_KEY = 'dv_inquiry_cooldown'
 const COOLDOWN_MS  = 60 * 1000
@@ -19,9 +19,18 @@ export default function AdInquiryForm() {
   const [done,       setDone]       = useState(false)
   const [error,      setError]      = useState<string | null>(null)
 
+  // Lightweight bot defenses (no external captcha): honeypot + minimum dwell time.
+  const [hp, setHp] = useState('')
+  const mountedAt = useRef(Date.now())
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    if (hp.trim() !== '' || Date.now() - mountedAt.current < 2500) {
+      setError('잠시 후 다시 시도해주세요.')
+      return
+    }
 
     const c = company.trim()
     const n = name.trim()
@@ -99,6 +108,17 @@ export default function AdInquiryForm() {
 
   return (
     <form onSubmit={submit} className="border border-border rounded-[10px] bg-surface p-5 md:p-6">
+      {/* Honeypot — hidden from users; bots tend to fill every field. */}
+      <input
+        type="text"
+        name="website"
+        value={hp}
+        onChange={(e) => setHp(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <Field label="회사 / 브랜드명">
           <input

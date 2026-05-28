@@ -1,32 +1,27 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useBlogStore } from '@/store/blogStore'
+import Link from 'next/link'
+import { X } from 'lucide-react'
 import PostCard from './PostCard'
 import AdSlot from './AdSlot'
 import CategoryTabs from './CategoryTabs'
 import Footer from '@/components/layout/Footer'
 import { Post } from '@/lib/types'
+import { useResolvedPosts } from '@/lib/usePosts'
 
 interface BlogListClientProps {
   initialPosts: Post[]
   initialCat: string
+  initialQuery?: string
 }
 
-export default function BlogListClient({ initialPosts, initialCat }: BlogListClientProps) {
-  const { posts: storePosts, _hydrated } = useBlogStore()
-  // SSR-first: the server-provided list is authoritative (all published seed + DB
-  // posts). The store only adds posts the server didn't return and never overrides
-  // a server copy, so admin-synced "lite" stubs can't shadow real post data.
-  const posts = _hydrated
-    ? (() => {
-        const initialIds = new Set(initialPosts.map((p) => p.id))
-        const merged = [...initialPosts, ...storePosts.filter((p) => !initialIds.has(p.id))]
-        return merged.sort((a, b) => b.date.localeCompare(a.date))
-      })()
-    : initialPosts
+export default function BlogListClient({ initialPosts, initialCat, initialQuery = '' }: BlogListClientProps) {
+  // SSR-first post resolution (see useResolvedPosts). Shared with the home page.
+  const posts = useResolvedPosts(initialPosts)
 
   const [activeCat, setActiveCat] = useState(initialCat)
+  const [query, setQuery] = useState(initialQuery)
   const [page, setPage] = useState(1)
   const PER_PAGE = 9
 
@@ -36,8 +31,22 @@ export default function BlogListClient({ initialPosts, initialCat }: BlogListCli
     setPage(1)
   }, [initialCat])
 
+  // Sync the search term when arriving via /blog?q=... (JSON-LD SearchAction target)
+  useEffect(() => {
+    setQuery(initialQuery)
+    setPage(1)
+  }, [initialQuery])
+
+  const q = query.trim().toLowerCase()
+  const matchesQuery = (p: Post) =>
+    p.title.toLowerCase().includes(q) ||
+    p.description.toLowerCase().includes(q) ||
+    p.category.toLowerCase().includes(q) ||
+    (p.tags ?? []).some((t) => t.toLowerCase().includes(q))
+
   const published = posts.filter((p) => p.published !== false && p.slug && p.title && !p.deletedAt)
-  const filtered = activeCat === '전체' ? published : published.filter((p) => p.category === activeCat)
+  const searched = q ? published.filter(matchesQuery) : published
+  const filtered = activeCat === '전체' ? searched : searched.filter((p) => p.category === activeCat)
   const total = Math.ceil(filtered.length / PER_PAGE)
   const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
@@ -53,12 +62,33 @@ export default function BlogListClient({ initialPosts, initialCat }: BlogListCli
       {/* Page header with category tabs */}
       <div className="border-b border-border px-6 pt-10 md:pt-[40px] pb-0">
         <div className="max-w-[1080px] mx-auto">
-          <h1
-            className="font-bold text-fg mb-4"
-            style={{ fontSize: 'clamp(1.375rem, 2.5vw, 1.75rem)', letterSpacing: '-0.03em' }}
-          >
-            블로그
-          </h1>
+          {q ? (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1
+                  className="font-bold text-fg"
+                  style={{ fontSize: 'clamp(1.375rem, 2.5vw, 1.75rem)', letterSpacing: '-0.03em' }}
+                >
+                  ‘{query.trim()}’ 검색 결과
+                </h1>
+                <span className="text-sm text-fg-3">{filtered.length}건</span>
+                <Link
+                  href="/blog"
+                  className="inline-flex items-center gap-1 ml-1 px-2.5 py-1 border border-border rounded-full text-xs text-fg-2 hover:text-accent hover:border-accent transition-colors"
+                >
+                  <X size={12} />
+                  검색 해제
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <h1
+              className="font-bold text-fg mb-4"
+              style={{ fontSize: 'clamp(1.375rem, 2.5vw, 1.75rem)', letterSpacing: '-0.03em' }}
+            >
+              블로그
+            </h1>
+          )}
           <CategoryTabs active={activeCat} onChange={handleCatChange} variant="underline" />
         </div>
       </div>
@@ -99,7 +129,11 @@ export default function BlogListClient({ initialPosts, initialCat }: BlogListCli
         {filtered.length === 0 && (
           <div className="py-16 text-center text-fg-3">
             <div className="text-4xl mb-3">—</div>
-            <div className="text-sm">해당 카테고리의 발행된 글이 없습니다.</div>
+            <div className="text-sm">
+              {q
+                ? `‘${query.trim()}’에 대한 검색 결과가 없습니다.`
+                : '해당 카테고리의 발행된 글이 없습니다.'}
+            </div>
           </div>
         )}
 

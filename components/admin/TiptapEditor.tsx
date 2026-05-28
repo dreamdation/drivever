@@ -12,7 +12,7 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import Heading from '@tiptap/extension-heading'
 import { toHeadingId } from '@/lib/utils'
 import imageCompression from 'browser-image-compression'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
 import { Bold, Italic, Strikethrough, Heading2, Heading3, List, ListOrdered, Link, Scale, Lightbulb, Unlink, ImageIcon, Loader2, Minus, Video, ListChecks } from 'lucide-react'
 
 // ── Video URL parser ─────────────────────────────────────────────

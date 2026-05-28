@@ -18,6 +18,14 @@ const COLS = [
       { href: '/advertise', label: '광고 문의' },
     ],
   },
+  {
+    head: '정책',
+    items: [
+      { href: '/privacy', label: '개인정보처리방침' },
+      { href: '/terms', label: '이용약관' },
+      { href: '/contact', label: '연락처' },
+    ],
+  },
 ]
 
 export default function Footer() {
@@ -42,11 +50,18 @@ export default function Footer() {
             </span>
           </div>
           <p className="text-sm text-[#888] leading-relaxed mb-3">
-            실제 오너의 경험으로 정확한 운전과 자동차 정보를 전달하는 블로그
+            실제 오너의 경험을 담은 자동차·교통 정보 블로그
           </p>
           <p className="text-xs text-[#ccc]">
-            © 2025 Drivever. 본 블로그의 정보는 참고용이며 법적 효력이 없습니다.
+            © {year} Drivever. 본 블로그의 정보는 참고용이며 법적 효력이 없습니다.
           </p>
+
+          {/* Mobile-only policy links (desktop shows them as a column) */}
+          <div className="flex md:hidden flex-wrap gap-x-3 gap-y-1 mt-4">
+            <Link href="/privacy" className="text-xs text-fg-2 hover:text-accent transition-colors">개인정보처리방침</Link>
+            <Link href="/terms" className="text-xs text-fg-2 hover:text-accent transition-colors">이용약관</Link>
+            <Link href="/contact" className="text-xs text-fg-2 hover:text-accent transition-colors">연락처</Link>
+          </div>
         </div>
 
         {/* Nav columns */}

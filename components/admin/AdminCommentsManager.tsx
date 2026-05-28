@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Trash2, MessageSquare, Crown } from 'lucide-react'
 import { Post } from '@/lib/types'
-import { supabase, CommentRow } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
+import { CommentRow } from '@/lib/supabase'
 
 interface CommentWithMeta {
   id: number

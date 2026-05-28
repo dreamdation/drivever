@@ -1,14 +1,44 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { ADSENSE_CLIENT, AD_SLOTS, AdSize } from '@/lib/adsense'
+
 interface AdSlotProps {
-  size?: 'leaderboard' | 'rectangle' | 'large' | 'sidebar'
+  size?: AdSize
   label?: string
 }
 
-// Ad slot positions (sizes kept for future AdSense activation):
-// leaderboard  — 728×90  (히어로 하단, 본문 상단/섹션 사이/하단)
-// rectangle    — 300×250 (사이드바 상단/하단)
-// large        — 970×90  (라지 리더보드)
-// sidebar      — 160×600 (와이드 스카이스크레이퍼)
-export default function AdSlot(_props: AdSlotProps) {
-  // 광고 활성화 시 여기에 AdSense 스크립트 삽입
-  return null
+// Renders a responsive AdSense display unit for the given placement.
+// No-op until both the publisher ID (NEXT_PUBLIC_ADSENSE_CLIENT) and the
+// matching ad-unit slot ID (lib/adsense.ts → AD_SLOTS) are configured, so
+// nothing breaks during the pre-approval / pre-ad-unit phase.
+export default function AdSlot({ size = 'leaderboard' }: AdSlotProps) {
+  const slot = AD_SLOTS[size]
+  const pushed = useRef(false)
+
+  useEffect(() => {
+    if (!ADSENSE_CLIENT || !slot || pushed.current) return
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({})
+      pushed.current = true
+    } catch {
+      /* AdSense not ready / blocked — ignore */
+    }
+  }, [slot])
+
+  if (!ADSENSE_CLIENT || !slot) return null
+
+  return (
+    <div className="my-6 text-center" aria-hidden="true">
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-client={ADSENSE_CLIENT}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  )
 }

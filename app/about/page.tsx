@@ -1,12 +1,42 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import Link from 'next/link'
 import AdSlot from '@/components/blog/AdSlot'
 import Footer from '@/components/layout/Footer'
+import { SITE_URL } from '@/lib/site'
+
+const CONTACT_EMAIL = 'dreamdation@gmail.com'
 
 export const metadata: Metadata = {
   title: '블로그 소개',
   description: 'Drivever는 실제 오너의 경험과 정확한 법률 해석을 제공하는 프리미엄 자동차·교통 정보 블로그입니다.',
-  alternates: { canonical: 'https://drivever.com/about' },
+  alternates: { canonical: `${SITE_URL}/about` },
+}
+
+function AboutJsonLd() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    url: `${SITE_URL}/about`,
+    mainEntity: {
+      '@type': 'Person',
+      name: 'Drivever 운영자',
+      description:
+        '2023년식 Audi Q7 55 TFSI 오너. 수입차 유지보수와 교통법규 해석을 직접 경험한 데이터와 공식 법령을 기반으로 작성합니다.',
+      email: CONTACT_EMAIL,
+      knowsAbout: ['자동차 유지보수', '교통법규', '안전운전', '수입차', '도로교통법'],
+      url: `${SITE_URL}/about`,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Drivever',
+      url: SITE_URL,
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/favicon-drivever-512.png` },
+    },
+  }
+  return (
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+  )
 }
 
 const CONTENT_CATEGORIES = [
@@ -19,6 +49,7 @@ const CONTENT_CATEGORIES = [
 export default function AboutPage() {
   return (
     <div>
+      <AboutJsonLd />
       {/* Hero banner */}
       <div className="py-12 md:py-[72px] px-6 text-center" style={{ background: '#0a1628' }}>
         <div className="max-w-[680px] mx-auto">
@@ -94,6 +125,14 @@ export default function AboutPage() {
                 2023년식 Audi Q7 55 TFSI 오너. 수입차 유지보수와 교통법규에 깊은 관심을 갖고 있습니다.
                 모든 정보는 직접 경험한 데이터와 공식 법령을 기반으로 작성합니다.
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent hover:underline">
+                  {CONTACT_EMAIL}
+                </a>
+                <Link href="/contact" className="text-fg-2 hover:text-accent transition-colors">
+                  연락처 →
+                </Link>
+              </div>
             </div>
           </div>
         </section>

@@ -23,7 +23,17 @@
       "Bash(git push *)",
       "Bash(cat app/admin/comments/page.tsx)",
       "Bash(cat app/admin/page.tsx)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(git remote *)",
+      "mcp__762763fa-20c6-49db-9e94-0028944dbcaf__list_tables",
+      "Bash(npm audit *)",
+      "Bash(node -e \"console.log\\('next', require\\('next/package.json'\\).version\\)\")",
+      "mcp__762763fa-20c6-49db-9e94-0028944dbcaf__search_docs",
+      "mcp__762763fa-20c6-49db-9e94-0028944dbcaf__execute_sql",
+      "mcp__762763fa-20c6-49db-9e94-0028944dbcaf__apply_migration",
+      "mcp__762763fa-20c6-49db-9e94-0028944dbcaf__get_advisors",
+      "Bash(echo \"=== tsc exit: $? ===\")",
+      "Bash(powershell -Command \"if \\(Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue\\) { 'BUSY' } else { 'FREE' }\")"
     ]
   }
 }

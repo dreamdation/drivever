@@ -13,7 +13,8 @@ import AdminInquiriesManager from './AdminInquiriesManager'
 import AdminTrashManager from './AdminTrashManager'
 import LoginClient from './LoginClient'
 import { Post } from '@/lib/types'
-import { supabase, postToRow, rowToPost, PostRow, fetchHeroSlides, saveHeroSlides } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
+import { postToRow, rowToPost, PostRow, fetchHeroSlides, saveHeroSlides } from '@/lib/supabase'
 
 interface AdminClientProps {
   initialView: AdminView
@@ -37,7 +38,7 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
   // Hero config is DB-backed — load it so the admin edits the live, shared
   // version (not a stale per-browser localStorage copy).
   useEffect(() => {
-    fetchHeroSlides().then((slides) => { if (slides) setHeroSlides(slides) })
+    fetchHeroSlides(supabase).then((slides) => { if (slides) setHeroSlides(slides) })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Unread ('new') ad-inquiry count for the sidebar badge.
@@ -157,12 +158,14 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
     setPosts(updated)
     localStorage.setItem('drivever_posts', JSON.stringify(updated))
 
-    const changed = updated.find((p) => {
+    // Persist EVERY changed/new post, not just the first one — bulk edits used to
+    // silently drop all but one row.
+    const changed = updated.filter((p) => {
       const prev = posts.find((o) => o.id === p.id)
       return !prev || JSON.stringify(prev) !== JSON.stringify(p)
     })
-    if (changed) {
-      await supabase.from('posts').upsert(postToRow(changed))
+    if (changed.length > 0) {
+      await supabase.from('posts').upsert(changed.map(postToRow))
     }
   }
 
@@ -221,7 +224,7 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
 
   const handleSaveHero = async (updated: typeof heroSlides) => {
     setHeroSlides(updated)                       // instant UI
-    const { error } = await saveHeroSlides(updated)  // durable, shared (DB)
+    const { error } = await saveHeroSlides(supabase, updated)  // durable, shared (DB)
     if (error) {
       console.error('Hero save failed:', error)
       alert('히어로 저장에 실패했습니다. 다시 시도해주세요.')

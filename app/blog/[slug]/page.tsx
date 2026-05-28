@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { INITIAL_POSTS } from '@/lib/data'
 import { supabase, rowToPost, PostRow } from '@/lib/supabase'
+import { SITE_URL } from '@/lib/site'
 import { Post } from '@/lib/types'
 import ArticleClient from '@/components/article/ArticleClient'
 
@@ -12,6 +13,19 @@ interface Props {
 }
 
 export async function generateStaticParams() {
+  // Pre-render published, non-trashed posts at build time (seed is empty now —
+  // posts live in Supabase). Falls back to the seed if the DB is unreachable.
+  try {
+    const { data } = await supabase
+      .from('posts')
+      .select('slug')
+      .eq('published', true)
+      .is('deleted_at', null)
+    const slugs = (data ?? [])
+      .map((r) => (r as { slug: string }).slug)
+      .filter((s) => s && s.trim() !== '')
+    if (slugs.length > 0) return slugs.map((slug) => ({ slug }))
+  } catch { /* DB unavailable at build — fall through */ }
   return INITIAL_POSTS.map((p) => ({ slug: p.slug }))
 }
 
@@ -33,12 +47,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.description,
     keywords: post.tags,
-    alternates: { canonical: `https://drivever.com/blog/${post.slug}` },
+    alternates: { canonical: `${SITE_URL}/blog/${encodeURIComponent(post.slug)}` },
     openGraph: {
       type: 'article',
       title: post.title,
       description: post.description,
-      url: `https://drivever.com/blog/${post.slug}`,
+      url: `${SITE_URL}/blog/${encodeURIComponent(post.slug)}`,
       ...(post.thumbnail && { images: [{ url: post.thumbnail }] }),
       publishedTime: post.date.replace(/\./g, '-'),
       authors: ['Drivever 운영자'],
@@ -60,13 +74,13 @@ function ArticleJsonLd({ post }: { post: Post }) {
     description: post.description,
     datePublished: post.date.replace(/\./g, '-'),
     dateModified: post.date.replace(/\./g, '-'),
-    author: { '@type': 'Person', name: 'Drivever 운영자', url: 'https://drivever.com/about' },
+    author: { '@type': 'Person', name: 'Drivever 운영자', url: `${SITE_URL}/about` },
     publisher: {
       '@type': 'Organization',
       name: 'Drivever',
-      logo: { '@type': 'ImageObject', url: 'https://drivever.com/favicon-drivever-512.png' },
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/favicon-drivever-512.png` },
     },
-    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://drivever.com/blog/${post.slug}` },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/blog/${encodeURIComponent(post.slug)}` },
     keywords: post.tags.join(', '),
     articleSection: post.category,
     ...(post.thumbnail && { image: post.thumbnail }),

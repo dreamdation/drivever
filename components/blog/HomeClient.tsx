@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useBlogStore } from '@/store/blogStore'
 import HeroCarousel from './HeroCarousel'
 import PostCard from './PostCard'
 import AdSlot from './AdSlot'
 import CategoryTabs from './CategoryTabs'
 import Footer from '@/components/layout/Footer'
 import { Post, HeroSlide } from '@/lib/types'
+import { useResolvedPosts } from '@/lib/usePosts'
 
 const PER_PAGE = 9
 
@@ -17,19 +17,8 @@ interface HomeClientProps {
 }
 
 export default function HomeClient({ initialPosts, initialHero }: HomeClientProps) {
-  const { posts: storePosts, _hydrated } = useBlogStore()
-
-  // SSR-first: the server-provided list is authoritative (it already includes
-  // all published seed + DB posts). The store only contributes posts the server
-  // didn't return, and never overrides a server copy — so admin-synced "lite"
-  // stubs can't shadow the real post data.
-  const posts = _hydrated
-    ? (() => {
-        const initialIds = new Set(initialPosts.map((p) => p.id))
-        const merged = [...initialPosts, ...storePosts.filter((p) => !initialIds.has(p.id))]
-        return merged.sort((a, b) => b.date.localeCompare(a.date))
-      })()
-    : initialPosts
+  // SSR-first post resolution (see useResolvedPosts). Shared with the blog list.
+  const posts = useResolvedPosts(initialPosts)
   // Hero is DB-backed and served by SSR (authoritative) — don't override it with
   // the per-browser localStorage copy, which is stale/empty for most visitors.
   const heroSlides = initialHero
