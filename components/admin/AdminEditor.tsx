@@ -314,7 +314,7 @@ export default function AdminEditor({ posts, editPost, onBack, onSave, onTrash }
               className="w-full px-2.5 py-2 border border-border rounded-[6px] text-sm outline-none font-[inherit]"
               style={{ fontFamily: 'monospace' }}
             />
-            <div className="text-[10px] text-fg-3 mt-1 truncate">drivever.com/blog/{slug || '...'}</div>
+            <div className="text-[10px] text-fg-3 mt-1 truncate">drivever.kr/blog/{slug || '...'}</div>
           </MetaField>
 
           {/* Preview card */}

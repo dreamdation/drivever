@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Footer from '@/components/layout/Footer'
+import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: '이용약관',
   description:
     'Drivever 블로그 이용약관 — 콘텐츠 이용, 저작권, 면책, 댓글 운영 정책을 안내합니다.',
-  alternates: { canonical: 'https://drivever.com/terms' },
+  alternates: { canonical: `${SITE_URL}/terms` },
 }
 
 const EFFECTIVE_DATE = '2026년 5월 28일'

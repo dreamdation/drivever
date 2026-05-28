@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import AdInquiryForm from '@/components/contact/AdInquiryForm'
 import Footer from '@/components/layout/Footer'
+import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: '광고 문의',
   description: 'Drivever 블로그 광고 문의 — 배너·콘텐츠 광고 등 제휴 제안을 남겨주세요.',
-  alternates: { canonical: 'https://drivever.com/advertise' },
+  alternates: { canonical: `${SITE_URL}/advertise` },
 }
 
 export default function AdvertisePage() {

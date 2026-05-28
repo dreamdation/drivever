@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Footer from '@/components/layout/Footer'
+import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: '개인정보처리방침',
   description:
     'Drivever 블로그의 개인정보처리방침 — 수집 항목, 이용 목적, 쿠키 및 Google AdSense 광고, 보유 기간, 이용자의 권리를 안내합니다.',
-  alternates: { canonical: 'https://drivever.com/privacy' },
+  alternates: { canonical: `${SITE_URL}/privacy` },
 }
 
 const CONTACT_EMAIL = 'dreamdation@gmail.com'

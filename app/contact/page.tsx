@@ -2,12 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Mail, Megaphone, MessageCircle } from 'lucide-react'
 import Footer from '@/components/layout/Footer'
+import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: '연락처',
   description:
     'Drivever 블로그 연락처 — 콘텐츠 제보, 정정 요청, 광고·제휴 문의 등 운영자에게 연락하는 방법을 안내합니다.',
-  alternates: { canonical: 'https://drivever.com/contact' },
+  alternates: { canonical: `${SITE_URL}/contact` },
 }
 
 const CONTACT_EMAIL = 'dreamdation@gmail.com'
