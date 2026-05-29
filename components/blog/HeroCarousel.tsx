@@ -31,6 +31,26 @@ export default function HeroCarousel({ slides, posts }: HeroCarouselProps) {
     timerRef.current = setInterval(goNext, 5500)
   }
 
+  // Touch swipe (mobile has no arrows). Only act on a clearly horizontal drag so
+  // we never hijack vertical page scrolling, and ignore taps (button/dots).
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    touchStart.current = { x: t.clientX, y: t.clientY }
+  }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current
+    touchStart.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy)) return
+    if (dx < 0) goNext()
+    else goPrev()
+    resetTimer()
+  }
+
   useEffect(() => {
     resetTimer()
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
@@ -63,7 +83,9 @@ export default function HeroCarousel({ slides, posts }: HeroCarouselProps) {
   return (
     <div
       className="relative overflow-hidden"
-      style={{ height: 'clamp(380px, 40vw, 520px)', background: '#0a1628' }}
+      style={{ height: 'clamp(380px, 40vw, 520px)', background: '#0a1628', touchAction: 'pan-y' }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
       {/* Slide backgrounds */}
       {slides.map((s, i) => (

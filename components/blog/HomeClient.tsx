@@ -62,7 +62,7 @@ export default function HomeClient({ initialPosts, initialHero }: HomeClientProp
         {/* Post grid */}
         <section className="py-8" aria-label="최신 포스트">
           {firstGroup.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               {firstGroup.map((p) => (
                 <PostCard key={p.id} post={p} />
               ))}
@@ -72,7 +72,7 @@ export default function HomeClient({ initialPosts, initialHero }: HomeClientProp
           {secondGroup.length > 0 && (
             <>
               <AdSlot size="leaderboard" label="광고 영역 — 728×90 (목록 중간)" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 {secondGroup.map((p) => (
                   <PostCard key={p.id} post={p} />
                 ))}
@@ -81,7 +81,7 @@ export default function HomeClient({ initialPosts, initialHero }: HomeClientProp
           )}
 
           {thirdGroup.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               {thirdGroup.map((p) => (
                 <PostCard key={p.id} post={p} />
               ))}
