@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { Megaphone, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { trackEvent } from '@/lib/analytics'
 
 const COOLDOWN_KEY = 'dv_inquiry_cooldown'
 const COOLDOWN_MS  = 60 * 1000
@@ -82,6 +83,7 @@ export default function AdInquiryForm() {
     }
 
     try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())) } catch { /* ignore */ }
+    trackEvent('generate_lead', { form_name: 'ad_inquiry' })
     setCompany(''); setName(''); setEmail(''); setPhone(''); setMessage('')
     setDone(true)
   }

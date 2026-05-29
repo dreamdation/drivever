@@ -6,6 +6,7 @@ import { Comment } from '@/lib/types'
 import { supabase } from '@/lib/supabaseClient'
 import { sha256Hex } from '@/lib/crypto'
 import { useAuth } from '@/lib/useAuth'
+import { trackEvent } from '@/lib/analytics'
 
 const AVATAR_COLORS = ['#0070F3', '#7C3AED', '#059669', '#D97706', '#DB2777']
 
@@ -181,6 +182,8 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
       setError('댓글 등록에 실패했습니다. 다시 시도해주세요.')
       return
     }
+
+    trackEvent('comment_submit', { post_id: postId })
 
     if (data) {
       setComments((prev) => prev.map((c) => c.id === tempId ? { ...c, id: data.id } : c))

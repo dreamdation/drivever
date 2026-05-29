@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Search, X } from 'lucide-react'
 import { Post } from '@/lib/types'
 import { supabase } from '@/lib/supabaseClient'
+import { trackEvent } from '@/lib/analytics'
 
 interface SearchOverlayProps {
   posts: Post[]
@@ -70,6 +71,7 @@ export default function SearchOverlay({ posts, onClose }: SearchOverlayProps) {
   const goToResults = () => {
     const term = query.trim()
     if (term.length < 2) return
+    trackEvent('search', { search_term: term })
     router.push(`/blog?q=${encodeURIComponent(term)}`)
     onClose()
   }
@@ -111,7 +113,11 @@ export default function SearchOverlay({ posts, onClose }: SearchOverlayProps) {
             <button
               key={p.id}
               className="block w-full px-1 py-2.5 border-b border-[#f3f3f3] last:border-0 text-left hover:bg-surface transition-colors duration-100 rounded"
-              onClick={() => { router.push(`/blog/${p.slug}`); onClose() }}
+              onClick={() => {
+                trackEvent('select_content', { content_type: 'article', item_id: p.slug })
+                router.push(`/blog/${p.slug}`)
+                onClose()
+              }}
             >
               <div className="text-[0.9375rem] font-semibold text-fg mb-1 leading-snug">{p.title}</div>
               <div className="text-[11px] text-[#aaa]">{p.category} · {p.date}</div>

@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import './globals.css'
 import SiteShell from '@/components/layout/SiteShell'
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics'
 import { SITE_URL } from '@/lib/site'
 import { ADSENSE_CLIENT } from '@/lib/adsense'
+import { GA_ID } from '@/lib/analytics'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -64,14 +66,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body suppressHydrationWarning>
         {/* Google Consent Mode v2 — default everything to denied BEFORE the ads
-            loader runs. The cookie banner flips these to 'granted' on consent. */}
-        {ADSENSE_CLIENT && (
+            or analytics loaders run. The cookie banner flips these to 'granted'
+            on consent. Also bootstraps gtag/dataLayer so GA can queue events. */}
+        {(ADSENSE_CLIENT || GA_ID) && (
           <Script id="consent-default" strategy="beforeInteractive">
             {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});`}
           </Script>
         )}
         <SiteShell>{children}</SiteShell>
+        <GoogleAnalytics />
         {ADSENSE_CLIENT && (
           <Script
             id="adsbygoogle-loader"

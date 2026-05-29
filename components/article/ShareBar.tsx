@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Facebook, Link2, Share2, MessageCircle, Check } from 'lucide-react'
+import { trackEvent } from '@/lib/analytics'
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
 
@@ -48,14 +49,23 @@ export default function ShareBar({ title, description, imageUrl, className }: Sh
   const openPopup = (url: string) =>
     window.open(url, '_blank', 'noopener,noreferrer,width=600,height=640')
 
-  const shareX = () =>
+  const logShare = (method: string) =>
+    trackEvent('share', { method, content_type: 'article', item_id: window.location.pathname })
+
+  const shareX = () => {
+    logShare('x')
     openPopup(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(currentUrl())}`)
+  }
 
-  const shareFacebook = () =>
+  const shareFacebook = () => {
+    logShare('facebook')
     openPopup(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl())}`)
+  }
 
-  const shareNaver = () =>
+  const shareNaver = () => {
+    logShare('naver')
     openPopup(`https://share.naver.com/web/shareView?url=${encodeURIComponent(currentUrl())}&title=${encodeURIComponent(title)}`)
+  }
 
   const shareKakao = async () => {
     if (!KAKAO_KEY) return
@@ -64,6 +74,7 @@ export default function ShareBar({ title, description, imageUrl, className }: Sh
       const Kakao = getKakao()
       if (!Kakao) return
       if (!Kakao.isInitialized()) Kakao.init(KAKAO_KEY)
+      logShare('kakao')
       const link = { mobileWebUrl: currentUrl(), webUrl: currentUrl() }
       Kakao.Share.sendDefault({
         objectType: 'feed',
@@ -84,6 +95,7 @@ export default function ShareBar({ title, description, imageUrl, className }: Sh
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(currentUrl())
+      logShare('link')
       setCopied(true)
       setTimeout(() => setCopied(false), 1800)
     } catch {
@@ -94,6 +106,7 @@ export default function ShareBar({ title, description, imageUrl, className }: Sh
   const nativeShare = async () => {
     try {
       await navigator.share({ title, text: description, url: currentUrl() })
+      logShare('native')
     } catch { /* user cancelled */ }
   }
 
