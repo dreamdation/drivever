@@ -37,7 +37,10 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
   },
-  alternates: { canonical: SITE_URL },
+  alternates: {
+    canonical: SITE_URL,
+    types: { 'application/rss+xml': `${SITE_URL}/rss.xml` },
+  },
   icons: {
     icon: '/favicon-drivever-512.png',
     apple: '/favicon-drivever-512.png',
