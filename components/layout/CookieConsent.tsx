@@ -8,15 +8,18 @@ const CONSENT_KEY = 'dv_cookie_consent' // 'granted' | 'denied'
 
 type Consent = 'granted' | 'denied'
 
-// Pushes a Google Consent Mode v2 update for the ad/analytics signals.
-function applyConsent(value: Consent) {
+// Pushes a Google Consent Mode v2 update.
+// analytics_storage is always 'granted' — basic site analytics is acceptable
+// without explicit consent on non-EU sites (KR PIPA). Only ad-related signals
+// require the user's opt-in via the cookie banner.
+function applyConsent(adConsent: Consent) {
   const g = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag
   if (typeof g !== 'function') return
   g('consent', 'update', {
-    ad_storage: value,
-    ad_user_data: value,
-    ad_personalization: value,
-    analytics_storage: value,
+    ad_storage: adConsent,
+    ad_user_data: adConsent,
+    ad_personalization: adConsent,
+    analytics_storage: 'granted',  // always on: GA4 traffic data is not ad-targeted
   })
 }
 
@@ -30,12 +33,14 @@ export default function CookieConsent() {
     try { stored = localStorage.getItem(CONSENT_KEY) } catch { /* ignore */ }
     if (stored === 'granted') applyConsent('granted')
     else if (stored === 'denied') applyConsent('denied')
+    // analytics_storage is already 'granted' by the beforeInteractive default script,
+    // so even first-time visitors get GA tracking before choosing.
     else setVisible(true)
   }, [])
 
   const choose = (value: Consent) => {
     try { localStorage.setItem(CONSENT_KEY, value) } catch { /* ignore */ }
-    applyConsent(value)
+    applyConsent(value)   // updates ad signals; analytics stays granted regardless
     setVisible(false)
   }
 

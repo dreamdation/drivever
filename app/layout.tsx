@@ -68,13 +68,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body suppressHydrationWarning>
-        {/* Google Consent Mode v2 — default everything to denied BEFORE the ads
-            or analytics loaders run. The cookie banner flips these to 'granted'
-            on consent. Also bootstraps gtag/dataLayer so GA can queue events. */}
+        {/* Google Consent Mode v2 — ad signals default to denied (require banner
+            consent); analytics_storage defaults to granted so GA4 always fires.
+            For non-EU sites (KR) analytics without consent is acceptable; ad
+            personalisation requires explicit opt-in. */}
         {(ADSENSE_CLIENT || GA_ID) && (
           <Script id="consent-default" strategy="beforeInteractive">
             {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
-gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});`}
+gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'granted',wait_for_update:500});`}
           </Script>
         )}
         <SiteShell>{children}</SiteShell>

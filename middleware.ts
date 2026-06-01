@@ -3,9 +3,18 @@ import { createServerClient } from '@supabase/ssr'
 
 // Top-level routes owned by the app — these must never be treated as a legacy
 // WordPress permalink and rewritten to /blog/*.
+// Also includes common WordPress-specific paths so they 404 cleanly instead of
+// getting a misleading 301 → /blog/wp-admin etc. (which GSC flags as redirect chains).
 const RESERVED_SEGMENTS = new Set([
+  // App routes
   'blog', 'about', 'advertise', 'contact', 'login',
   'privacy', 'terms', 'admin', 'api', 'opengraph-image',
+  'rss.xml', 'sitemap.xml', 'robots.txt', 'ads.txt',
+  // WordPress-specific paths — let these pass through to Next's 404 cleanly
+  'wp-admin', 'wp-login', 'wp-content', 'wp-includes', 'wp-json',
+  'feed', 'rss', 'atom', 'xmlrpc.php',
+  'category', 'tag', 'author', 'page', 'search',
+  'sitemap_index.xml', 'post-sitemap.xml', 'page-sitemap.xml',
 ])
 
 // Legacy WordPress used root-level permalinks: https://drivever.kr/{slug}/ .
