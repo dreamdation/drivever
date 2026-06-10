@@ -42,4 +42,6 @@ export interface Comment {
   text: string
   date: string
   isAdmin?: boolean
+  parentId?: number | null
+  isDeleted?: boolean
 }

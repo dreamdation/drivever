@@ -44,6 +44,8 @@ export type CommentRow = {
   created_at:    string
   password_hash: string | null
   is_admin:      boolean
+  parent_id:     number | null
+  is_deleted:    boolean
 }
 
 export type InquiryStatus = 'new' | 'read' | 'replied' | 'archived'

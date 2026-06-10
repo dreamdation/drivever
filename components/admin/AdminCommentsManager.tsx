@@ -15,6 +15,8 @@ interface CommentWithMeta {
   date: string
   created_at: string
   isAdmin: boolean
+  parentId: number | null
+  isDeleted: boolean
 }
 
 interface AdminCommentsManagerProps {
@@ -44,6 +46,8 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
               date:       r.date,
               created_at: r.created_at,
               isAdmin:    r.is_admin,
+              parentId:   r.parent_id,
+              isDeleted:  r.is_deleted,
             }))
           )
         }
@@ -52,9 +56,19 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
   }, [posts])
 
   const handleDelete = async (comment: CommentWithMeta) => {
+    // A comment with replies leaves a "삭제된 댓글" trace (soft delete) so the
+    // thread stays readable; a leaf is removed outright. Matches the public view.
+    const hasChildren = allComments.some((c) => c.parentId === comment.id)
     if (!confirm(`"${comment.name}"의 댓글을 삭제하시겠습니까?`)) return
-    setAllComments((prev) => prev.filter((c) => c.id !== comment.id))
-    await supabase.from('comments').delete().eq('id', comment.id)
+
+    if (hasChildren) {
+      setAllComments((prev) => prev.map((c) =>
+        c.id === comment.id ? { ...c, isDeleted: true, text: '', name: '' } : c))
+      await supabase.from('comments').update({ is_deleted: true, text: '', name: '' }).eq('id', comment.id)
+    } else {
+      setAllComments((prev) => prev.filter((c) => c.id !== comment.id))
+      await supabase.from('comments').delete().eq('id', comment.id)
+    }
   }
 
   const postsWithComments = posts.filter((p) => allComments.some((c) => c.postId === p.id))
@@ -122,21 +136,26 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-fg whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
+                    {c.parentId != null && <span className="text-[10px] font-bold text-accent" title="대댓글">↳</span>}
                     {c.isAdmin && <Crown size={12} style={{ color: '#0070F3' }} />}
-                    {c.name}
+                    {c.isDeleted ? <span className="text-fg-3 font-normal italic">(삭제됨)</span> : c.name}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-fg-2 max-w-[300px]">
-                  <div className="overflow-hidden text-ellipsis whitespace-nowrap">{c.text}</div>
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {c.isDeleted ? <span className="text-fg-3 italic">삭제된 댓글입니다.</span> : c.text}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-fg-3 whitespace-nowrap">{c.date}</td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => handleDelete(c)}
-                    className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit]"
-                  >
-                    <Trash2 size={13} />삭제
-                  </button>
+                  {!c.isDeleted && (
+                    <button
+                      onClick={() => handleDelete(c)}
+                      className="inline-flex items-center gap-1 px-2.5 py-[5px] border border-border rounded-[5px] bg-white text-xs text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors font-[inherit]"
+                    >
+                      <Trash2 size={13} />삭제
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
