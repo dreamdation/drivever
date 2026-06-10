@@ -21,10 +21,13 @@ function loadKakaoSdk(): Promise<void> {
   if (kakaoLoad) return kakaoLoad
   kakaoLoad = new Promise<void>((resolve, reject) => {
     const s = document.createElement('script')
-    s.src = 'https://t1.kakao.com/kakao_js_sdk/2.7.2/kakao.min.js'
+    s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js'
     s.async = true
     s.onload = () => resolve()
-    s.onerror = () => reject(new Error('Kakao SDK load failed'))
+    s.onerror = () => {
+      kakaoLoad = null // allow retry on next attempt
+      reject(new Error('Kakao SDK load failed'))
+    }
     document.head.appendChild(s)
   })
   return kakaoLoad
