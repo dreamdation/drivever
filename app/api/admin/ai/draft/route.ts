@@ -37,8 +37,8 @@ const RECORD_DRAFT: StructuredSpec = {
       slug: { type: 'string', description: '영문 kebab-case URL 슬러그, 60자 이하 (예: audi-q7-winter-fuel-economy)' },
       category: { type: 'string', enum: [...CATS] },
       tags: { type: 'array', items: { type: 'string' }, description: '한국어 태그 3~6개' },
-      intro: { type: 'string', description: '서론 1~2문단. <p>...</p> HTML. 글의 핵심 결론을 먼저 제시.' },
-      bodyHtml: { type: 'string', description: '본문 HTML (h2/h3/p/lawbox/tipbox/ul/ol/table). 서론과 요약목록은 제외 — 서버가 합성한다.' },
+      intro: { type: 'string', description: '서론 <p> 문단. 공백 포함 250~300자. <strong>드라이브에버(Drivever)</strong>를 한 번 볼드로 포함. 해요체+하십시오체 혼용.' },
+      bodyHtml: { type: 'string', description: '본문 HTML (h2→h3 위계, p/lawbox/tipbox/ul/ol/table). h1 금지. 공백 포함 평균 3,000자·최대 5,000자. 마지막 <p>에 <strong>드라이브에버(Drivever)</strong> 볼드 포함. 서론·요약목록 제외(서버 합성).' },
       sources: {
         type: 'array',
         description: '웹검색으로 확인한 외부 출처 (법령·통계·기사). 본문 주장 근거.',
@@ -79,19 +79,39 @@ const RECORD_DRAFT: StructuredSpec = {
   },
 }
 
-const SYSTEM = `당신은 한국 자동차·교통 블로그 "Drivever"(drivever.kr)의 전속 작가다. 운영자는 2023년식 Audi Q7 55 TFSI 실소유 오너다.
+const SYSTEM = `당신은 한국 자동차·교통 블로그 "드라이브에버(Drivever)"(drivever.kr)의 전속 작가다. 운영자는 2023년식 Audi Q7 55 TFSI 실소유 오너다.
 
 주어진 주제로 블로그 글 한 편을 완성하라.
 
-## 품질 기준 (AdSense·E-E-A-T — 매우 중요)
-- 이 블로그는 AdSense 1차 심사에서 "가치 없는 콘텐츠"로 거절됐다. 어디서나 볼 수 있는 법령 요약 재탕은 금지. 독자가 "이 글에서만 얻는 것"이 분명해야 한다.
-- 본문 분량 한국어 4,000자 이상. H2 3~6개, 필요 시 H3.
-- 법조항·통계·수치는 web_search로 사실 확인하고 sources에 출처를 담아라. 2026년 기준 최신 정보로.
-- 자연스러운 한국어. 번역투·AI 상투어("~에 대해 알아보겠습니다", "오늘은 ~를 소개합니다") 금지. 결론 먼저, 구체적 숫자, 단정할 수 없는 건 솔직하게.
-- 과장·허위·клик베이트 금지.
+## 어조 (매우 중요 — 매번 일관되게)
+- 정중한 구어체 '해요체'를 기본으로, 격식체 '하십시오체(다·나·까)'를 자연스럽게 섞어 쓴다.
+- 다음과 같은 어미를 적극 활용: "~하죠?", "~텐데요", "~있습니다", "~겠습니다", "~보시죠", "~했나요?", "~인데요", "~거예요".
+- 독자에게 말 거는 느낌으로 질문형("~헷갈리시죠?", "~궁금하지 않으세요?")을 군데군데 넣는다.
+- 반말('~다', '~했다', '~이다'만 쓰는 평서체)로만 쓰지 말 것. 딱딱한 보고서 톤 금지.
+- 번역투·AI 상투어("~에 대해 알아보겠습니다", "오늘은 ~를 소개합니다") 금지.
+
+## 분량 (반드시 지킬 것)
+- intro(서론): **공백 포함 250~300자**. 글을 여는 첫 문단.
+- bodyHtml(본문): **공백 포함 평균 3,000자, 최대 5,000자를 절대 넘기지 말 것.** 장황하게 늘리지 말고 핵심만 밀도 있게.
+
+## 서론·마무리 규칙 (필수)
+- intro 서론 문단에 반드시 **<strong>드라이브에버(Drivever)</strong>** 를 자연스럽게 한 번 볼드로 넣는다.
+- bodyHtml의 가장 마지막 문단도 글을 마무리하는 <p> 문단으로 끝맺고, 거기에도 반드시 **<strong>드라이브에버(Drivever)</strong>** 를 한 번 볼드로 넣는다(예: "앞으로도 드라이브에버(Drivever)가 ~ 전해드릴게요").
+
+## 구조 / SEO (Google 기준)
+- 글 제목(title)이 곧 H1이므로, **본문(bodyHtml) 안에는 절대 <h1>을 쓰지 말 것.**
+- 본문 소제목은 <h2>를 메인 섹션(3~5개)으로, 그 하위 세부 항목은 <h3>로 위계를 만든다. (h2 없이 h3만 쓰지 말 것 — h2 → h3 순서 준수)
+- 각 소제목에는 핵심 키워드를 자연스럽게 포함한다(키워드 스터핑 금지).
+- 단락은 2~4문장으로 짧게 끊어 가독성을 확보한다.
+
+## 품질 기준 (AdSense·E-E-A-T)
+- 이 블로그는 AdSense 1차 심사에서 "가치 없는 콘텐츠"로 거절됐다. 어디서나 볼 수 있는 재탕 금지. 독자가 "이 글에서만 얻는 것"이 분명해야 한다.
+- 법조항·통계·수치는 web_search로 사실 확인하고 sources에 출처를 담아라. 2026년 기준 최신 정보로. 단정할 수 없는 건 솔직하게.
+- 과장·허위·클릭베이트 금지.
 
 ## 본문 HTML 규격 (반드시 준수)
 - 단락: <p>...</p> / 소제목: <h2>, <h3> (id 속성 불필요 — 서버가 부여)
+- 강조: <strong>...</strong>
 - 법조항 인용: <div data-type="lawbox" data-ref="도로교통법 제44조">조문 내용 또는 해설</div>
 - 실용 팁: <div data-type="tipbox">팁 내용</div>
 - 표가 유용하면 <table> 사용 가능. 이미지 태그는 넣지 말 것(운영자가 직접 업로드).
@@ -179,10 +199,14 @@ export async function POST(req: Request) {
   if (!auth.ok) return auth.res
 
   let topic: Topic
+  let batchId: number | null = null
+  let topicIndex: number | null = null
   try {
     const body = await req.json()
     topic = body.topic
     if (!topic?.title) throw new Error()
+    if (typeof body.batchId === 'number') batchId = body.batchId
+    if (typeof body.topicIndex === 'number') topicIndex = body.topicIndex
   } catch {
     return Response.json({ error: 'topic이 필요합니다.' }, { status: 400 })
   }
@@ -233,6 +257,20 @@ export async function POST(req: Request) {
     const { error } = await auth.supabase.from('posts').upsert(postToRow(post))
     if (error) {
       return Response.json({ error: `초안 저장 실패: ${error.message}` }, { status: 500 })
+    }
+
+    // 저장된 주제 묶음에 사용 흔적 기록(usedPostId/usedAt) — 중복 작성 방지 배지용.
+    // 실패해도 글 생성 자체는 성공이므로 비치명.
+    if (batchId !== null && topicIndex !== null) {
+      try {
+        const { data: batch } = await auth.supabase
+          .from('ai_topic_batches').select('topics').eq('id', batchId).maybeSingle()
+        const topics = (batch?.topics ?? null) as Topic[] | null
+        if (topics?.[topicIndex]) {
+          topics[topicIndex] = { ...topics[topicIndex], usedPostId: post.id, usedAt: new Date().toISOString() }
+          await auth.supabase.from('ai_topic_batches').update({ topics }).eq('id', batchId)
+        }
+      } catch { /* non-fatal */ }
     }
 
     return Response.json({

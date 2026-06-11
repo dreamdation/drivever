@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Trash2, MessageSquare, Crown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Trash2, MessageSquare, Crown, ExternalLink } from 'lucide-react'
 import { Post } from '@/lib/types'
 import { supabase } from '@/lib/supabaseClient'
 import { CommentRow } from '@/lib/supabase'
@@ -10,6 +10,7 @@ interface CommentWithMeta {
   id: number
   postId: number
   postTitle: string
+  postSlug: string | null
   name: string
   text: string
   date: string
@@ -23,10 +24,20 @@ interface AdminCommentsManagerProps {
   posts: Post[]
 }
 
+// 포스트(제목) 열을 제외한 고정 폭 합계 — 드래그 시 테이블 최소 너비 계산용
+const FIXED_W = 160 /*작성자*/ + 300 /*내용*/ + 120 /*작성일*/ + 96 /*관리*/
+
 export default function AdminCommentsManager({ posts }: AdminCommentsManagerProps) {
   const [allComments, setAllComments] = useState<CommentWithMeta[]>([])
   const [postFilter, setPostFilter] = useState<number | 'all'>('all')
   const [loading, setLoading] = useState(true)
+
+  // 포스트(제목) 열 사용자 조절 폭 — 대시보드와 동일한 인터랙션
+  const [titleWidth, setTitleWidth] = useState(240)
+  const [isDragging, setIsDragging] = useState(false)
+  const resizingRef = useRef(false)
+  const startXRef = useRef(0)
+  const startWidthRef = useRef(0)
 
   useEffect(() => {
     supabase
@@ -35,12 +46,14 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data) {
-          const postMap = new Map(posts.map((p) => [p.id, p.title]))
+          const titleMap = new Map(posts.map((p) => [p.id, p.title]))
+          const slugMap = new Map(posts.map((p) => [p.id, p.slug]))
           setAllComments(
             (data as CommentRow[]).map((r) => ({
               id:         r.id,
               postId:     r.post_id,
-              postTitle:  postMap.get(r.post_id) ?? `포스트 #${r.post_id}`,
+              postTitle:  titleMap.get(r.post_id) ?? `포스트 #${r.post_id}`,
+              postSlug:   slugMap.get(r.post_id) ?? null,
               name:       r.name,
               text:       r.text,
               date:       r.date,
@@ -54,6 +67,29 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
         setLoading(false)
       })
   }, [posts])
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    resizingRef.current   = true
+    startXRef.current     = e.clientX
+    startWidthRef.current = titleWidth
+    setIsDragging(true)
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return
+      const next = Math.max(120, Math.min(640, startWidthRef.current + ev.clientX - startXRef.current))
+      setTitleWidth(next)
+    }
+    const onUp = () => {
+      resizingRef.current = false
+      setIsDragging(false)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
 
   const handleDelete = async (comment: CommentWithMeta) => {
     // A comment with replies leaves a "삭제된 댓글" trace (soft delete) so the
@@ -75,7 +111,7 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
   const displayed = postFilter === 'all' ? allComments : allComments.filter((c) => c.postId === postFilter)
 
   return (
-    <div className="p-8 max-w-[960px]">
+    <div className="p-8 max-w-[1100px]">
       {/* Header */}
       <div className="mb-7">
         <h1 className="text-[1.375rem] font-bold text-fg mb-1">댓글 관리</h1>
@@ -103,12 +139,46 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
         ))}
       </div>
 
-      {/* Table */}
-      <div className="border border-border rounded-[8px] overflow-hidden">
-        <table className="w-full border-collapse">
+      {/* Table — title column is user-resizable (drag the grip on its header) */}
+      <div className="border border-border rounded-[8px] overflow-x-auto">
+        <table className="border-collapse" style={{ tableLayout: 'fixed', width: '100%', minWidth: titleWidth + FIXED_W }}>
+          <colgroup>
+            <col style={{ width: titleWidth }} />
+            <col style={{ width: 160 }} />
+            <col />
+            <col style={{ width: 120 }} />
+            <col style={{ width: 96 }} />
+          </colgroup>
           <thead>
             <tr className="bg-surface border-b border-border">
-              {['포스트', '작성자', '내용', '작성일', '관리'].map((h) => (
+              <th className="relative px-4 py-2.5 text-left text-[11px] font-bold text-fg-3" style={{ letterSpacing: '0.04em' }}>
+                포스트
+                <div
+                  onMouseDown={startResize}
+                  title="드래그하여 포스트 열 너비 조절"
+                  className="group/handle"
+                  style={{
+                    position: 'absolute', right: 0, top: 0, bottom: 0,
+                    width: 14, cursor: 'col-resize', zIndex: 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: '0 2px 2px 0',
+                    background: isDragging ? 'rgba(0,112,243,0.08)' : 'transparent',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  {isDragging ? (
+                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 2, background: '#0070F3', borderRadius: 1 }} />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="group-hover/handle:bg-accent"
+                          style={{ width: 3, height: 3, borderRadius: '50%', background: '#C8CDD8', transition: 'background 0.15s' }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </th>
+              {['작성자', '내용', '작성일', '관리'].map((h) => (
                 <th key={h} className="px-4 py-2.5 text-left text-[11px] font-bold text-fg-3" style={{ letterSpacing: '0.04em' }}>
                   {h}
                 </th>
@@ -131,8 +201,21 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
               </tr>
             ) : displayed.map((c) => (
               <tr key={c.id} className="border-b border-border last:border-0 hover:bg-surface transition-colors duration-100">
-                <td className="px-4 py-3 text-xs text-fg-2 max-w-[180px]">
-                  <div className="overflow-hidden text-ellipsis whitespace-nowrap">{c.postTitle}</div>
+                <td className="px-4 py-3 text-xs text-fg-2">
+                  {c.postSlug ? (
+                    <a
+                      href={`/blog/${c.postSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={c.postTitle}
+                      className="group inline-flex items-center gap-1 max-w-full text-fg-2 hover:text-accent transition-colors"
+                    >
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{c.postTitle}</span>
+                      <ExternalLink size={11} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                  ) : (
+                    <div className="overflow-hidden text-ellipsis whitespace-nowrap" title={c.postTitle}>{c.postTitle}</div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-fg whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
@@ -141,7 +224,7 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
                     {c.isDeleted ? <span className="text-fg-3 font-normal italic">(삭제됨)</span> : c.name}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-fg-2 max-w-[300px]">
+                <td className="px-4 py-3 text-sm text-fg-2">
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap">
                     {c.isDeleted ? <span className="text-fg-3 italic">삭제된 댓글입니다.</span> : c.text}
                   </div>
