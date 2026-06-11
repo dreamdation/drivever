@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, Search, Loader2, RefreshCw, Copy, Check, ExternalLink, PenLine, AlertTriangle } from 'lucide-react'
+import { Sparkles, Search, Loader2, RefreshCw, Copy, Check, ExternalLink, PenLine, AlertTriangle, History, Trash2, FileCheck2 } from 'lucide-react'
+import { supabase } from '@/lib/supabaseClient'
 
 const CATS = ['전체', '교통법규', 'Premium Garage', '안전운전', '차량관리']
 
@@ -19,6 +20,23 @@ interface Topic {
   rationale: string
   keywords: string[]
   recentRefs: { title: string; url: string; date: string }[]
+  usedPostId?: number   // draft 생성 후 서버가 기록 — '글 생성됨' 배지용
+  usedAt?: string
+}
+
+// 저장된 주제 제안 묶음(1회 생성 = 1행) — ai_topic_batches 테이블
+interface BatchRow {
+  id: number
+  created_at: string
+  category: string
+  keywords: string
+  topics: Topic[]
+}
+
+function formatBatchDate(iso: string): string {
+  return new Date(iso).toLocaleString('ko-KR', {
+    year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
 }
 
 interface DraftDone {
@@ -44,6 +62,10 @@ export default function AdminAiWriter() {
 
   const [topicsLoading, setTopicsLoading] = useState(false)
   const [topics, setTopics] = useState<Topic[] | null>(null)
+  const [activeBatchId, setActiveBatchId] = useState<number | null>(null)
+
+  const [batches, setBatches] = useState<BatchRow[]>([])
+  const [batchesLoading, setBatchesLoading] = useState(true)
 
   const [drafting, setDrafting] = useState<string | null>(null) // 생성 중인 topic.title
   const [progressIdx, setProgressIdx] = useState(0)
@@ -54,6 +76,34 @@ export default function AdminAiWriter() {
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => () => { if (progressTimer.current) clearInterval(progressTimer.current) }, [])
+
+  // 저장된 주제 묶음 목록 — 다시 열어도 토큰 소모 없음
+  const loadBatches = async () => {
+    const { data } = await supabase
+      .from('ai_topic_batches')
+      .select('id, created_at, category, keywords, topics')
+      .order('created_at', { ascending: false })
+      .limit(30)
+    setBatches((data as BatchRow[]) ?? [])
+    setBatchesLoading(false)
+  }
+
+  useEffect(() => { loadBatches() }, [])
+
+  const viewBatch = (b: BatchRow) => {
+    setError(null)
+    setDone(null)
+    setTopics(b.topics)
+    setActiveBatchId(b.id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const deleteBatch = async (id: number) => {
+    if (!window.confirm('이 주제 묶음을 삭제할까요? (이미 생성된 글에는 영향 없습니다)')) return
+    await supabase.from('ai_topic_batches').delete().eq('id', id)
+    if (activeBatchId === id) { setTopics(null); setActiveBatchId(null) }
+    loadBatches()
+  }
 
   const fetchTopics = async () => {
     setError(null)
@@ -69,6 +119,8 @@ export default function AdminAiWriter() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '주제 제안에 실패했습니다.')
       setTopics(data.topics ?? [])
+      setActiveBatchId(data.batchId ?? null)
+      loadBatches() // 방금 저장된 묶음을 목록에 반영
     } catch (e) {
       setError(e instanceof Error ? e.message : '주제 제안에 실패했습니다.')
     } finally {
@@ -76,7 +128,7 @@ export default function AdminAiWriter() {
     }
   }
 
-  const generateDraft = async (topic: Topic) => {
+  const generateDraft = async (topic: Topic, topicIndex: number) => {
     setError(null)
     setDrafting(topic.title)
     setProgressIdx(0)
@@ -88,11 +140,14 @@ export default function AdminAiWriter() {
       const res = await fetch('/api/admin/ai/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic, batchId: activeBatchId, topicIndex }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '글 생성에 실패했습니다.')
       setDone(data)
+      // 화면의 카드에도 '글 생성됨' 즉시 반영 + 목록 카운트 갱신
+      setTopics((prev) => prev?.map((t, i) => (i === topicIndex ? { ...t, usedPostId: data.id } : t)) ?? prev)
+      loadBatches()
     } catch (e) {
       setError(e instanceof Error ? e.message : '글 생성에 실패했습니다.')
     } finally {
@@ -164,7 +219,7 @@ export default function AdminAiWriter() {
             에디터에서 검토하기
           </button>
           <button
-            onClick={() => { setDone(null); setTopics(null) }}
+            onClick={() => { setDone(null); setTopics(null); setActiveBatchId(null) }}
             className="inline-flex items-center gap-2 px-4 py-2.5 border border-border rounded-[6px] bg-white text-sm text-fg-2 hover:bg-surface transition-colors font-[inherit]"
           >
             <RefreshCw size={14} />
@@ -255,6 +310,10 @@ export default function AdminAiWriter() {
         <>
           <div className="text-xs font-bold text-fg-3 mb-3" style={{ letterSpacing: '0.05em' }}>
             제안된 주제 {topics.length}개 — 하나를 선택하면 초안을 생성합니다
+            {(() => {
+              const b = batches.find((x) => x.id === activeBatchId)
+              return b ? ` · ${formatBatchDate(b.created_at)} 생성 묶음` : ''
+            })()}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {topics.map((t, i) => {
@@ -267,6 +326,12 @@ export default function AdminAiWriter() {
                       {angle.label}
                     </span>
                     <span className="text-[11px] text-fg-3">{t.category}</span>
+                    {t.usedPostId && (
+                      <span className="inline-flex items-center gap-0.5 px-2 py-[2px] rounded-sm text-[10px] font-bold"
+                            style={{ background: '#ECFDF5', color: '#059669' }}>
+                        <FileCheck2 size={10} />글 생성됨
+                      </span>
+                    )}
                   </div>
                   <div className="text-[0.9375rem] font-bold text-fg leading-snug">{t.title}</div>
                   <p className="text-[13px] text-fg-2 leading-relaxed flex-1">{t.rationale}</p>
@@ -289,11 +354,15 @@ export default function AdminAiWriter() {
                     </div>
                   )}
                   <button
-                    onClick={() => generateDraft(t)}
-                    className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-[13px] font-semibold rounded-[6px] transition-colors font-[inherit]"
+                    onClick={() => generateDraft(t, i)}
+                    className={
+                      t.usedPostId
+                        ? 'mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 border border-border bg-white text-fg-2 hover:bg-surface text-[13px] font-semibold rounded-[6px] transition-colors font-[inherit]'
+                        : 'mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-[13px] font-semibold rounded-[6px] transition-colors font-[inherit]'
+                    }
                   >
                     <Sparkles size={13} />
-                    이 주제로 글 생성
+                    {t.usedPostId ? '이미 생성됨 — 새로 또 생성' : '이 주제로 글 생성'}
                   </button>
                 </div>
               )
@@ -314,6 +383,73 @@ export default function AdminAiWriter() {
       {topics && topics.length === 0 && !topicsLoading && (
         <div className="py-12 text-center text-sm text-fg-3">제안된 주제가 없습니다. 키워드를 바꿔 다시 시도해보세요.</div>
       )}
+
+      {/* 저장된 주제 묶음 — 다시 열어도 토큰 소모 없음 */}
+      <div className="mt-10">
+        <div className="flex items-center gap-1.5 mb-3">
+          <History size={14} className="text-fg-3" />
+          <span className="text-xs font-bold text-fg-3" style={{ letterSpacing: '0.05em' }}>
+            저장된 주제 묶음 {batches.length > 0 ? `${batches.length}개` : ''} — 다시 열어도 토큰이 들지 않습니다
+          </span>
+        </div>
+
+        {batchesLoading ? (
+          <div className="py-6 text-center text-xs text-fg-3">불러오는 중…</div>
+        ) : batches.length === 0 ? (
+          <div className="border border-dashed border-border rounded-[10px] py-8 text-center text-xs text-fg-3">
+            아직 저장된 묶음이 없습니다. &lsquo;주제 제안받기&rsquo;를 실행하면 결과가 자동 저장됩니다.
+          </div>
+        ) : (
+          <div className="border border-border rounded-[10px] overflow-hidden">
+            {batches.map((b, idx) => {
+              const usedCount = b.topics.filter((t) => t.usedPostId).length
+              const isActive = b.id === activeBatchId
+              return (
+                <div
+                  key={b.id}
+                  className={
+                    'flex items-center gap-3 px-4 py-3' +
+                    (idx > 0 ? ' border-t border-border' : '') +
+                    (isActive ? ' bg-accent-light' : ' bg-white')
+                  }
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13px] font-semibold text-fg">{formatBatchDate(b.created_at)}</span>
+                      <span className="px-1.5 py-[1px] bg-surface border border-border rounded text-[10px] text-fg-2">
+                        {b.category}
+                      </span>
+                      {b.keywords && (
+                        <span className="text-[11px] text-fg-3 truncate max-w-[260px]">키워드: {b.keywords}</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-fg-3 mt-0.5">
+                      주제 {b.topics.length}개 · 글 생성 {usedCount}개
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => viewBatch(b)}
+                    className={
+                      isActive
+                        ? 'shrink-0 px-3 py-1.5 rounded-[6px] bg-accent text-white text-xs font-semibold font-[inherit]'
+                        : 'shrink-0 px-3 py-1.5 rounded-[6px] border border-border bg-white text-xs font-semibold text-fg-2 hover:border-accent hover:text-accent transition-colors font-[inherit]'
+                    }
+                  >
+                    {isActive ? '보는 중' : '열기'}
+                  </button>
+                  <button
+                    onClick={() => deleteBatch(b.id)}
+                    aria-label="묶음 삭제"
+                    className="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-[6px] border border-border bg-white text-[#aaa] hover:text-[#C0392B] hover:border-[#FFD0D0] transition-colors"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

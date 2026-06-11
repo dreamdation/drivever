@@ -13,6 +13,9 @@ export interface Topic {
   rationale: string
   keywords: string[]
   recentRefs: { title: string; url: string; date: string }[]
+  // 아래 둘은 AI 출력이 아니라, draft 생성 후 배치 jsonb에 주입되는 사용 흔적
+  usedPostId?: number
+  usedAt?: string
 }
 
 const RECORD_TOPICS: StructuredSpec = {
@@ -94,7 +97,18 @@ export async function POST(req: Request) {
       maxTokens: 8000,
       maxSearches: 4,
     })
-    return Response.json(result)
+
+    // 토큰 소모 결과를 묶음으로 저장 — 어드민이 재생성 없이 다시 열람·사용.
+    // 저장 실패는 비치명(주제는 그대로 반환), batchId만 null.
+    const batchId = Date.now()
+    const { error: saveError } = await auth.supabase.from('ai_topic_batches').insert({
+      id: batchId,
+      category: body.category ?? '전체',
+      keywords: body.keywords?.trim() ?? '',
+      topics: result.topics,
+    })
+
+    return Response.json({ topics: result.topics, batchId: saveError ? null : batchId })
   } catch (e) {
     const status = e instanceof ApiKeyMissingError ? 503 : 500
     const message = e instanceof Error ? e.message : '주제 제안에 실패했습니다.'
