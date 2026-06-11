@@ -40,7 +40,9 @@ function legacyPostRedirect(pathname: string): string | null {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/')
+  const isAdminPage = pathname === '/admin' || pathname.startsWith('/admin/')
+  const isAdminApi = pathname.startsWith('/api/admin')
+  const isAdmin = isAdminPage || isAdminApi
 
   // 1) Legacy WordPress permalink → /blog/* (everything except the admin area).
   if (!isAdmin) {
@@ -84,6 +86,10 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
+    // API routes get a 401 (no HTML redirect); pages bounce to /login.
+    if (isAdminApi) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirect', request.nextUrl.pathname)

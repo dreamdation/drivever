@@ -11,6 +11,7 @@ import AdminHeroManager from './AdminHeroManager'
 import AdminCommentsManager from './AdminCommentsManager'
 import AdminInquiriesManager from './AdminInquiriesManager'
 import AdminTrashManager from './AdminTrashManager'
+import AdminAiWriter from './AdminAiWriter'
 import LoginClient from './LoginClient'
 import { Post } from '@/lib/types'
 import { supabase } from '@/lib/supabaseClient'
@@ -148,6 +149,7 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
     setView(v)
     if (v === 'dashboard')      router.replace('/admin')
     else if (v === 'editor')   { setEditPost(null); router.replace('/admin/editor') }
+    else if (v === 'ai')        router.replace('/admin/ai')
     else if (v === 'hero')      router.replace('/admin/hero')
     else if (v === 'comments')  router.replace('/admin/comments')
     else if (v === 'inquiries') router.replace('/admin/inquiries')
@@ -293,6 +295,9 @@ export default function AdminClient({ initialView, editPostId, returnUrl }: Admi
               else handleNavigate('dashboard')
             } : undefined}
           />
+        )}
+        {view === 'ai' && (
+          <AdminAiWriter />
         )}
         {view === 'hero' && (
           <AdminHeroManager
