@@ -1,8 +1,12 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { requireAdmin } from '../_lib/auth'
 import { runStructured, ApiKeyMissingError, type StructuredSpec } from '../_lib/ai'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300 // web_search 다회 호출 — Vercel fluid compute 기준
+
+// 저장된 주제 묶음 자동 정리 기준: 최신 N개만 유지(그 이상은 오래된 순으로 삭제)
+const MAX_TOPIC_BATCHES = 30
 
 const CATS = ['교통법규', 'Premium Garage', '안전운전', '차량관리'] as const
 
@@ -108,10 +112,34 @@ export async function POST(req: Request) {
       topics: result.topics,
     })
 
+    // 오래된 묶음 자동 정리 — 최신 30개만 유지하되, 글이 생성된(usedPostId가 있는)
+    // 묶음은 이력 보존을 위해 남긴다. 정리 실패는 비치명(저장 결과 반환에 영향 없음).
+    if (!saveError) await pruneOldBatches(auth.supabase)
+
     return Response.json({ topics: result.topics, batchId: saveError ? null : batchId })
   } catch (e) {
     const status = e instanceof ApiKeyMissingError ? 503 : 500
     const message = e instanceof Error ? e.message : '주제 제안에 실패했습니다.'
     return Response.json({ error: message }, { status })
+  }
+}
+
+// 최신 MAX_TOPIC_BATCHES개를 넘는 오래된 묶음을 삭제한다.
+// 단, 토픽 중 하나라도 글로 생성된(usedPostId) 묶음은 정리 대상에서 제외해
+// "이 글이 어느 묶음에서 나왔는지" 이력을 보존한다. 발행된 글(posts)과는 무관.
+async function pruneOldBatches(supabase: SupabaseClient): Promise<void> {
+  const { data, error } = await supabase
+    .from('ai_topic_batches')
+    .select('id, topics')
+    .order('id', { ascending: false })
+  if (error || !data) return
+
+  const deletable = data
+    .slice(MAX_TOPIC_BATCHES) // 최신 N개는 무조건 보존
+    .filter((b) => !(b.topics as Topic[] | null)?.some((t) => t?.usedPostId))
+    .map((b) => b.id as number)
+
+  if (deletable.length > 0) {
+    await supabase.from('ai_topic_batches').delete().in('id', deletable)
   }
 }
