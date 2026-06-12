@@ -204,7 +204,7 @@ export default function AdminCommentsManager({ posts }: AdminCommentsManagerProp
                 <td className="px-4 py-3 text-xs text-fg-2">
                   {c.postSlug ? (
                     <a
-                      href={`/blog/${c.postSlug}`}
+                      href={`/blog/${c.postSlug}#comments`}
                       target="_blank"
                       rel="noopener noreferrer"
                       title={c.postTitle}

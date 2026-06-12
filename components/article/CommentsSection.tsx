@@ -94,6 +94,18 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
       })
   }, [postId])
 
+  // #comments 해시로 진입한 경우(어드민 댓글 관리 링크 등), 댓글 로드 완료 후
+  // 다시 스크롤해 준다 — 본문 이미지 로딩으로 레이아웃이 밀려 초기 앵커 점프가
+  // 어긋나는 것을 보정.
+  useEffect(() => {
+    if (loading) return
+    if (typeof window === 'undefined' || window.location.hash !== '#comments') return
+    const t = setTimeout(() => {
+      document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 150)
+    return () => clearTimeout(t)
+  }, [loading])
+
   // Shared write path for both top-level comments and replies. Runs the full
   // validation + anti-spam gauntlet, optimistically inserts, then persists.
   // `parentId` is null for top-level comments, or the parent comment id for a reply.
@@ -490,7 +502,7 @@ export default function CommentsSection({ postId }: CommentsSectionProps) {
   )
 
   return (
-    <div className="mt-12">
+    <div id="comments" className="mt-12 scroll-mt-[80px]">
       <div className="h-px bg-border mb-7" />
       <h3 className="text-md font-bold text-fg mb-5">
         댓글
