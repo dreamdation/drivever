@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import HeroCarousel from './HeroCarousel'
 import PostCard from './PostCard'
 import AdSlot from './AdSlot'
@@ -25,6 +25,18 @@ export default function HomeClient({ initialPosts, initialHero }: HomeClientProp
 
   const [cat, setCat] = useState('전체')
   const [page, setPage] = useState(1)
+  // Scroll target: the category-filter bar should land just under the sticky header
+  const tabsRef = useRef<HTMLDivElement>(null)
+
+  const goToPage = (n: number) => {
+    setPage(n)
+    const el = tabsRef.current
+    if (el) {
+      const HEADER_H = 56 // sticky header height (see Header.tsx)
+      const y = el.getBoundingClientRect().top + window.scrollY - HEADER_H
+      window.scrollTo({ top: y, behavior: 'smooth' })
+    }
+  }
 
   const published = posts.filter((p) => p.published !== false && p.slug && p.title && !p.deletedAt)
   const filtered = cat === '전체' ? published : published.filter((p) => p.category === cat)
@@ -53,7 +65,7 @@ export default function HomeClient({ initialPosts, initialHero }: HomeClientProp
         <AdSlot size="leaderboard" />
 
         {/* Category tabs */}
-        <div className="border-b border-border bg-[#FAFAFA] -mx-6 px-4">
+        <div ref={tabsRef} className="border-b border-border bg-[#FAFAFA] -mx-6 px-4 scroll-mt-[56px]">
           <div className="h-11 flex items-center overflow-x-auto">
             <CategoryTabs active={cat} onChange={handleCatChange} variant="chip" />
           </div>
@@ -101,7 +113,7 @@ export default function HomeClient({ initialPosts, initialHero }: HomeClientProp
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                 <button
                   key={n}
-                  onClick={() => setPage(n)}
+                  onClick={() => goToPage(n)}
                   className="w-[34px] h-[34px] rounded-[6px] text-sm font-[inherit] transition-colors"
                   style={{
                     border: n === safePage ? 'none' : '1px solid #EAEAEA',

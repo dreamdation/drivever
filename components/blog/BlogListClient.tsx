@@ -57,6 +57,12 @@ export default function BlogListClient({ initialPosts, initialCat, initialQuery 
 
   const handleCatChange = (c: string) => { setActiveCat(c); setPage(1) }
 
+  // Category pages: paginating jumps the viewport to the very top of the site
+  const goToPage = (n: number) => {
+    setPage(n)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <div>
       {/* Page header with category tabs */}
@@ -143,7 +149,7 @@ export default function BlogListClient({ initialPosts, initialCat, initialQuery 
             {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
               <button
                 key={n}
-                onClick={() => setPage(n)}
+                onClick={() => goToPage(n)}
                 className="w-[34px] h-[34px] rounded-[6px] text-sm font-[inherit] transition-colors"
                 style={{
                   border: n === page ? 'none' : '1px solid #EAEAEA',
